@@ -31,7 +31,9 @@ import {FilesetResolver,FaceDetector} from "https://cdn.jsdelivr.net/npm/@mediap
 const video=document.getElementById("camera"),canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
 const start=document.getElementById("start"),btn=document.getElementById("startBtn"),status=document.getElementById("status"),tip=document.getElementById("tip");
 const scoreEl=document.getElementById("score");
-let detector=null,faceFound=false,running=false,lastVideoTime=-1,shieldX=0,score=0,items=[],last=performance.now(),nextSpawn=0;
+let detector=null,faceFound=false,running=false,lastVideoTime=-1,shieldX=0,targetShieldX=0,score=0,items=[],last=performance.now(),nextSpawn=0,lastDetect=0;
+const DETECT_INTERVAL=80; // ลดภาระ CPU เพื่อให้เกมลื่น
+
 
 const good=[["milk.png","🥛"],["fruit.png","🍎"],["vegetable.png","🥦"],["water.png","💧"]];
 const bad=[["cigarette.png","🚬"],["drugs.png","💊"],["alcohol.png","🍺"]];
@@ -54,19 +56,23 @@ async function setupDetector(){
 }
 async function detectLoop(){
  if(!detector||video.readyState<2){requestAnimationFrame(detectLoop);return}
- if(video.currentTime!==lastVideoTime){
+ const now=performance.now();
+ // ตรวจหน้าเป็นช่วง ๆ แทนการตรวจทุกเฟรม ทำให้การวาดเกมไม่กระตุก
+ if(now-lastDetect>=DETECT_INTERVAL && video.currentTime!==lastVideoTime){
+  lastDetect=now;
   lastVideoTime=video.currentTime;
   try{
-   const r=detector.detectForVideo(video,performance.now()),ds=r.detections||[];
+   const r=detector.detectForVideo(video,now),ds=r.detections||[];
    if(ds.length){
     faceFound=true;running=true;
     const b=ds[0].boundingBox;
     const cx=(b.originX+b.width/2)/video.videoWidth;
-    if(cx<.40)shieldX=-145;else if(cx>.60)shieldX=145;else shieldX=0;
+    // ใช้ตำแหน่งหน้าจริงต่อเนื่อง ไม่บังคับแค่ 3 ช่อง
+    targetShieldX=Math.max(-170,Math.min(170,(0.5-cx)*520));
     setStatus("🟢 พบใบหน้า! เริ่มเกมแล้ว",true);
     tip.textContent="👈 เลื่อนหน้า ซ้าย–ขวา รับของดี / หลบสิ่งเสพติด 👉";
    }else{
-    faceFound=false;running=false;shieldX=0;
+    faceFound=false;running=false;targetShieldX=0;
     setStatus("🔴 ยังไม่พบใบหน้า — ขยับหน้าเข้ากลางภาพ",false);
     tip.textContent="ให้เห็นหน้าผากถึงคาง และมีแสงเพียงพอ";
    }
@@ -82,15 +88,33 @@ async function startCamera(){
 }
 btn.onclick=async()=>{start.style.display="none";await startCamera()};
 
-function spawn(){let ok=Math.random()<.58,list=ok?good:bad,d=list[Math.floor(Math.random()*list.length)],lane=[.25,.5,.75][Math.floor(Math.random()*3)];items.push({x:innerWidth*lane,y:-70,speed:145+Math.random()*60,good:ok,file:d[0],emoji:d[1],hit:false})}
-function hit(it){let sy=innerHeight-155;if(it.hit)return;if(it.y>sy-65&&it.y<sy+65&&Math.abs(it.x-(innerWidth/2+shieldX))<105){it.hit=true;score+=it.good?10:-10;scoreEl.textContent=score;setStatus(it.emoji+(it.good?" ของมีประโยชน์ +10 คะแนน":" สิ่งเสพติด -10 คะแนน"),it.good)}}
+function spawn(){let ok=Math.random()<.58,list=ok?good:bad,d=list[Math.floor(Math.random()*list.length)],lane=[.25,.5,.75][Math.floor(Math.random()*3)];items.push({x:innerWidth*lane,y:-70,speed:175+Math.random()*75,good:ok,file:d[0],emoji:d[1],hit:false})}
+function hit(it){let sy=innerHeight-155;if(it.hit)return;if(it.y>sy-75&&it.y<sy+75&&Math.abs(it.x-(innerWidth/2+shieldX))<125){it.hit=true;score+=it.good?10:-10;scoreEl.textContent=score;setStatus(it.emoji+(it.good?" ของมีประโยชน์ +10 คะแนน":" สิ่งเสพติด -10 คะแนน"),it.good)}}
 function draw(){
- let now=performance.now(),dt=Math.min(.04,(now-last)/1000||.016);last=now;ctx.clearRect(0,0,innerWidth,innerHeight);
- if(running&&faceFound&&now>=nextSpawn){spawn();nextSpawn=now+1200}
+ let now=performance.now(),dt=Math.min(.04,(now-last)/1000||.016);last=now;
+ ctx.clearRect(0,0,innerWidth,innerHeight);
+
+ // ทำให้โล่ตามหน้าแบบนุ่มและเร็ว ไม่กระตุกเป็นซ้าย/กลาง/ขวา
+ const follow=1-Math.pow(0.0005,dt);
+ shieldX += (targetShieldX-shieldX)*follow;
+
+ if(running&&faceFound&&now>=nextSpawn){spawn();nextSpawn=now+1050}
  for(let it of items)if(!it.hit)it.y+=it.speed*dt;
- for(let it of items)hit(it);items=items.filter(it=>!it.hit&&it.y<innerHeight+100);
- for(let it of items){let im=images[it.file];if(im.complete)ctx.drawImage(im,it.x-44,it.y-44,88,88);else{ctx.font="58px sans-serif";ctx.textAlign="center";ctx.fillText(it.emoji,it.x,it.y)}}
- let sx=innerWidth/2+shieldX,sy=innerHeight-155;ctx.beginPath();ctx.arc(sx,sy,46,0,Math.PI*2);ctx.lineWidth=9;ctx.strokeStyle="#00d9ff";ctx.stroke();ctx.beginPath();ctx.arc(sx,sy,28,0,Math.PI*2);ctx.fillStyle="rgba(255,255,255,.8)";ctx.fill();requestAnimationFrame(draw)
+ for(let it of items)hit(it);
+ items=items.filter(it=>!it.hit&&it.y<innerHeight+100);
+
+ for(let it of items){
+  let im=images[it.file];
+  if(im.complete)ctx.drawImage(im,it.x-44,it.y-44,88,88);
+  else{ctx.font="58px sans-serif";ctx.textAlign="center";ctx.fillText(it.emoji,it.x,it.y)}
+ }
+
+ let sx=innerWidth/2+shieldX,sy=innerHeight-155;
+ ctx.beginPath();ctx.arc(sx,sy,48,0,Math.PI*2);
+ ctx.lineWidth=9;ctx.strokeStyle="#00d9ff";ctx.stroke();
+ ctx.beginPath();ctx.arc(sx,sy,29,0,Math.PI*2);
+ ctx.fillStyle="rgba(255,255,255,.8)";ctx.fill();
+ requestAnimationFrame(draw)
 }
 requestAnimationFrame(draw);
 </script>

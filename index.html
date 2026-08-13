@@ -7,7 +7,7 @@
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;font-family:Arial,Tahoma,sans-serif;color:#fff}
 #camera{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);z-index:0;background:#050505}
-#game{position:fixed;inset:0;width:100%;height:100%;z-index:5;pointer-events:none}
+#game{position:fixed;inset:0;width:100%;height:100%;z-index:5;pointer-events:auto;touch-action:none}
 #topbar{position:fixed;top:max(10px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:20;width:calc(100% - 24px);max-width:650px;display:flex;justify-content:center;gap:8px;align-items:center;flex-wrap:wrap;pointer-events:none}
 .badge{background:rgba(0,0,0,.70);padding:8px 13px;border-radius:22px;font-size:16px;font-weight:700;backdrop-filter:blur(5px)}
 #tip{position:fixed;top:76px;left:50%;transform:translateX(-50%);z-index:20;color:#fff;background:rgba(0,0,0,.55);padding:7px 13px;border-radius:20px;font-size:14px;text-align:center;white-space:nowrap;max-width:94%;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
@@ -49,8 +49,8 @@ h1{font-size:31px;text-align:center;margin:0 0 10px;font-weight:800}.sub{text-al
 <audio id="milkAudio" src="milk.wav" preload="auto"></audio>
 <audio id="winAudio" src="win.wav" preload="auto"></audio>
 <audio id="loseAudio" src="lose.wav" preload="auto"></audio>
-<script type="module">
-import {FilesetResolver,FaceDetector} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22-rc.20250304/vision_bundle.mjs";
+<script>
+let FilesetResolver=null,FaceDetector=null;
 const video=document.getElementById('camera'),canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
 const start=document.getElementById('start'),startBtn=document.getElementById('startBtn'),result=document.getElementById('result');
 const resultTitle=document.getElementById('resultTitle'),resultText=document.getElementById('resultText'),againBtn=document.getElementById('againBtn'),menuBtn=document.getElementById('menuBtn');
@@ -75,15 +75,44 @@ function resize(){const d=Math.min(devicePixelRatio||1,2);canvas.width=innerWidt
 function setStatus(t,ok=true){status.textContent=t;status.style.background=ok?'#18a94b':'#dc3545'}
 function updateUI(){scoreBadge.textContent='คะแนน: '+game.score;timeBadge.textContent='⏱️ '+Math.max(0,Math.ceil(game.timeLeft));heartBadge.textContent='พลัง: '+'❤️'.repeat(game.lives)+'🖤'.repeat(3-game.lives);}
 function resetGame(){game={active:true,score:0,lives:3,timeLeft:30,milk:0,items:[],last:performance.now(),nextSpawn:0,ended:false,faceFound:false};shieldX=0;targetShieldX=0;updateUI();result.style.display='none';tip.textContent=selectedLevel===1?'เลื่อนหน้า ซ้าย–ขวา รับของดี / หลบสิ่งเสพติด':selectedLevel===2?'เลื่อนหน้า ซ้าย–ขวา — ห้ามโดนของผิด':'เลื่อนหน้า ซ้าย–ขวา — เก็บเฉพาะ 🥛';setStatus('🟢 เริ่มภารกิจ!',true);playSound('start');startBg();}
-async function setupDetector(){try{tip.textContent='กำลังโหลดระบบตรวจใบหน้า...';const vision=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22-rc.20250304/wasm');detector=await FaceDetector.createFromOptions(vision,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite'},runningMode:'VIDEO',minDetectionConfidence:.30,minSuppressionThreshold:.30});tip.textContent='กล้องพร้อม — ขยับหน้าเพื่อควบคุมโล่';detectLoop();}catch(e){console.warn(e);setStatus('⚠️ ตรวจใบหน้าไม่ได้ — ใช้การลาก/แตะหน้าจอแทน',true);tip.textContent='กล้องไม่พร้อม แต่ยังเล่นด้วยการลากหน้าจอได้'}}
+async function setupDetector(){try{tip.textContent='กำลังโหลดระบบตรวจใบหน้า...';if(!FilesetResolver||!FaceDetector){const mod=await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22-rc.20250304/vision_bundle.mjs');FilesetResolver=mod.FilesetResolver;FaceDetector=mod.FaceDetector;}const vision=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22-rc.20250304/wasm');detector=await FaceDetector.createFromOptions(vision,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite'},runningMode:'VIDEO',minDetectionConfidence:.30,minSuppressionThreshold:.30});tip.textContent='กล้องพร้อม — ขยับหน้าเพื่อควบคุมโล่';detectLoop();}catch(e){console.warn(e);setStatus('⚠️ ตรวจใบหน้าไม่ได้ — ใช้การลาก/แตะหน้าจอแทน',true);tip.textContent='กล้องไม่พร้อม แต่ยังเล่นด้วยการลากหน้าจอได้'}}
 async function detectLoop(){if(!detector||video.readyState<2){requestAnimationFrame(detectLoop);return}const now=performance.now();if(now-lastDetect>=DETECT_INTERVAL&&video.currentTime!==lastVideoTime){lastDetect=now;lastVideoTime=video.currentTime;try{const r=detector.detectForVideo(video,now),ds=r.detections||[];if(ds.length){game.faceFound=true;const b=ds[0].boundingBox;const cx=(b.originX+b.width/2)/video.videoWidth;targetShieldX=Math.max(-180,Math.min(180,(0.5-cx)*520));}else game.faceFound=false;}catch(e){}}requestAnimationFrame(detectLoop)}
 async function startCamera(){if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setStatus('⚠️ เบราว์เซอร์ไม่รองรับกล้อง — เล่นด้วยการแตะได้',true);return}try{const stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}}});video.srcObject=stream;await video.play();await setupDetector();}catch(e){setStatus('⚠️ เปิดกล้องไม่ได้ — อนุญาตกล้อง หรือเล่นด้วยการแตะหน้าจอ',true);tip.textContent='ลากนิ้วซ้าย–ขวาเพื่อควบคุมโล่'}}
-function begin(){start.style.display='none';resetGame();startCamera();}
+function begin(e){if(e){e.preventDefault();e.stopPropagation();}start.style.display='none';resetGame();startCamera();}
 startBtn.onclick=begin;againBtn.onclick=()=>{result.style.display='none';resetGame()};menuBtn.onclick=()=>{game.active=false;stopBg();result.style.display='none';start.style.display='flex'};
 canvas.addEventListener('pointermove',e=>{if(game.active)targetShieldX=Math.max(-180,Math.min(180,e.clientX-innerWidth/2))});
 canvas.addEventListener('pointerdown',e=>{if(game.active)targetShieldX=Math.max(-180,Math.min(180,e.clientX-innerWidth/2))});
 function spawn(){let file,emoji,goodItem=true;if(selectedLevel===3){const r=Math.random();if(r<.42){[file,emoji]=good[0]}else if(r<.66){[file,emoji]=good[Math.floor(Math.random()*good.length)]}else{[file,emoji]=bad[Math.floor(Math.random()*bad.length)];goodItem=false}}else{goodItem=Math.random()<.58;const list=goodItem?good:bad;[file,emoji]=list[Math.floor(Math.random()*list.length)]}const lane=[.18,.32,.5,.68,.82][Math.floor(Math.random()*5)];game.items.push({x:innerWidth*lane,y:-70,speed:165+Math.random()*95,good:goodItem,file,emoji,hit:false});}
-function hit(it){if(it.hit)return;const sy=innerHeight-145;if(it.y>sy-70&&it.y<sy+70&&Math.abs(it.x-(innerWidth/2+shieldX))<120){it.hit=true;if(selectedLevel===3&&it.file==='milk.png'){game.milk++;game.score+=10;playSound('milk');setStatus('🥛 กล่องนม +1  ('+game.milk+'/9)',true);if(game.milk>=9){finish(true,'ครบ 9 กล่องนมตามเป้าหมาย!')}}else if(it.good){game.score+=10;playSound('good');setStatus(it.emoji+' ของมีประโยชน์ +10 คะแนน',true)}else{game.score-=10;game.lives=Math.max(0,game.lives-1);playSound('bad');playSound('heart');setStatus(it.emoji+' สิ่งเสพติด — เสียหัวใจ 1 ดวง',false);if(selectedLevel===2||game.lives<=0)finish(false,selectedLevel===2?'ด่านนี้ต้องไม่เสียหัวใจเลยแม้แต่ดวงเดียว':'พลังหมดแล้ว ลองใหม่อีกครั้ง')}}updateUI();}}
+function hit(it){
+  if(it.hit)return;
+  const sy=innerHeight-145;
+  const nearShield=it.y>sy-70&&it.y<sy+70&&Math.abs(it.x-(innerWidth/2+shieldX))<120;
+  if(!nearShield)return;
+  it.hit=true;
+
+  if(selectedLevel===3&&it.file==='milk.png'){
+    game.milk++;
+    game.score+=10;
+    playSound('milk');
+    setStatus('🥛 กล่องนม +1  ('+game.milk+'/9)',true);
+    if(game.milk>=9) finish(true,'ครบ 9 กล่องนมตามเป้าหมาย!');
+  }else if(it.good){
+    game.score+=10;
+    playSound('good');
+    setStatus(it.emoji+' ของมีประโยชน์ +10 คะแนน',true);
+  }else{
+    game.score-=10;
+    game.lives=Math.max(0,game.lives-1);
+    playSound('bad');
+    playSound('heart');
+    setStatus(it.emoji+' สิ่งเสพติด — เสียหัวใจ 1 ดวง',false);
+    if(selectedLevel===2||game.lives<=0){
+      finish(false,selectedLevel===2?'ด่านนี้ต้องไม่เสียหัวใจเลยแม้แต่ดวงเดียว':'พลังหมดแล้ว ลองใหม่อีกครั้ง');
+    }
+  }
+  updateUI();
+}
+
 function finish(win,reason){if(game.ended)return;game.ended=true;game.active=false;stopBg();if(win){playSound('win');resultTitle.textContent='🎉 ผ่านด่าน '+selectedLevel+'!';resultText.innerHTML=reason+'<br><b>คะแนน '+game.score+' คะแนน</b>'+(selectedLevel===3?'<br>🥛 เก็บนม '+game.milk+' กล่อง':'');}else{playSound('lose');resultTitle.textContent='💪 ลองอีกครั้ง';resultText.innerHTML=reason+'<br><b>คะแนน '+game.score+' คะแนน</b>';}result.style.display='flex';}
 function tick(){const now=performance.now(),dt=Math.min(.04,(now-game.last)/1000||.016);game.last=now;if(game.active&&!game.ended){game.timeLeft-=dt;if(game.timeLeft<=0){game.timeLeft=0;if(selectedLevel===3)finish(game.milk>=9,game.milk>=9?'ทำครบ 9 กล่องนมแล้ว!':'หมดเวลา — ต้องเก็บนมให้ครบ 9 กล่อง');else finish(true,'อยู่รอดครบ 30 วินาทีตามเป้าหมาย!')}if(selectedLevel!==3&&now>=game.nextSpawn){spawn();game.nextSpawn=now+(selectedLevel===1?980:820)}if(selectedLevel===3&&now>=game.nextSpawn){spawn();game.nextSpawn=now+760}}for(const it of game.items)if(!it.hit)it.y+=it.speed*dt;for(const it of game.items)hit(it);game.items=game.items.filter(it=>!it.hit&&it.y<innerHeight+100);updateUI();const follow=1-Math.pow(.0005,dt);shieldX+=(targetShieldX-shieldX)*follow;ctx.clearRect(0,0,innerWidth,innerHeight);for(const it of game.items){const im=images[it.file];if(im&&im.complete)ctx.drawImage(im,it.x-44,it.y-44,88,88);else{ctx.font='58px sans-serif';ctx.textAlign='center';ctx.fillText(it.emoji,it.x,it.y)}}const sx=innerWidth/2+shieldX,sy=innerHeight-145;ctx.beginPath();ctx.arc(sx,sy,51,0,Math.PI*2);ctx.lineWidth=9;ctx.strokeStyle='#00d9ff';ctx.stroke();ctx.beginPath();ctx.arc(sx,sy,31,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.82)';ctx.fill();requestAnimationFrame(tick)}
 requestAnimationFrame(tick);

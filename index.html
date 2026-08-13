@@ -8,140 +8,205 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-aframe.prod.js"></script>
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;font-family:Arial,Tahoma,sans-serif}
-#gameUI{position:fixed;top:max(14px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:20;color:#fff;background:rgba(0,0,0,.72);padding:10px 18px;border-radius:24px;font-size:18px;font-weight:700;white-space:nowrap}
-#status{position:fixed;bottom:max(24px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:20;width:calc(100% - 44px);max-width:520px;padding:13px 18px;border-radius:28px;text-align:center;background:#dc3545;color:#fff;font-weight:700;font-size:17px}
-#start{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:22px}
-#card{max-width:420px;width:100%;background:#202020;color:#fff;border-radius:26px;padding:28px;text-align:center}
+a-scene{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;z-index:1}
+#ui{position:fixed;top:max(14px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:20;color:#fff;background:rgba(0,0,0,.72);padding:10px 18px;border-radius:24px;font-size:18px;font-weight:700;white-space:nowrap}
+#status{position:fixed;bottom:max(24px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:20;width:calc(100% - 44px);max-width:600px;padding:14px 18px;border-radius:30px;text-align:center;background:#dc3545;color:#fff;font-weight:700;font-size:18px;box-sizing:border-box}
+#tip{position:fixed;top:78px;left:50%;transform:translateX(-50%);z-index:20;color:#fff;background:rgba(0,0,0,.55);padding:8px 14px;border-radius:20px;font-size:14px;text-align:center}
+#game{position:fixed;inset:0;z-index:10;width:100%;height:100%;pointer-events:none}
+#start{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;padding:22px;box-sizing:border-box}
+#card{max-width:430px;width:100%;background:#202020;color:#fff;border-radius:26px;padding:28px;text-align:center;box-sizing:border-box}
 #card h1{margin:0 0 12px;font-size:28px}
-#card p{line-height:1.7}
-#startBtn{border:0;width:100%;padding:16px;border-radius:32px;background:#20b24b;color:#fff;font-size:20px;font-weight:700}
-#cam{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);z-index:0;background:#000}
-#game{position:fixed;inset:0;z-index:5;pointer-events:none}
-#faceMarker{position:absolute;left:50%;top:50%;width:150px;height:190px;transform:translate(-50%,-50%);border:3px solid rgba(0,255,120,.75);border-radius:48% 48% 45% 45%;display:none}
-#tip{position:fixed;top:75px;left:50%;transform:translateX(-50%);z-index:19;color:#fff;background:rgba(0,0,0,.55);padding:7px 13px;border-radius:18px;font-size:13px}
-a-scene{position:fixed!important;inset:0!important;z-index:1!important;pointer-events:none}
+#card p{line-height:1.75}
+#startBtn{border:0;width:100%;padding:17px;border-radius:32px;background:#20b24b;color:#fff;font-size:20px;font-weight:700}
 </style>
 </head>
 <body>
-<video id="cam" autoplay playsinline muted></video>
-<canvas id="game"></canvas>
-<div id="gameUI">🏆 คะแนน: <span id="score">0</span> &nbsp;|&nbsp; พลัง: <span id="lives">❤️❤️❤️</span></div>
-<div id="tip">กำลังเตรียมกล้องและตรวจใบหน้า...</div>
+
+<div id="ui">🏆 คะแนน: <span id="score">0</span> &nbsp;|&nbsp; พลัง: <span id="lives">❤️❤️❤️</span></div>
+<div id="tip">กดเริ่มเกมเพื่อเปิดกล้อง</div>
 <div id="status">🔴 ยังไม่พบใบหน้า</div>
-<div id="faceMarker"></div>
+<canvas id="game"></canvas>
 
-<div id="start"><div id="card">
-<h1>🛡️ ผู้พิทักษ์จิ๋ว</h1>
-<p>🥛🍎🥦💧 ของมีประโยชน์ <b>+10</b><br>🚬💊🍺 สิ่งเสพติด <b>-10</b><br><br>เอียงศีรษะซ้าย–ขวาเพื่อควบคุมโล่</p>
-<button id="startBtn">🎮 เริ่มเกมและเปิดกล้อง</button>
-</div></div>
+<div id="start">
+  <div id="card">
+    <h1>🛡️ ผู้พิทักษ์จิ๋ว</h1>
+    <p>🥛🍎🥦💧 ของมีประโยชน์ <b>+10</b><br>
+    🚬💊🍺 สิ่งเสพติด <b>-10</b><br><br>
+    เอียงศีรษะซ้าย–ขวาเพื่อควบคุมโล่</p>
+    <button id="startBtn">🎮 เริ่มเกมและเปิดกล้อง</button>
+  </div>
+</div>
 
-<a-scene id="ar" mindar-face="autoStart: false" embedded vr-mode-ui="enabled:false" device-orientation-permission-ui="enabled:false" renderer="colorManagement:true">
-<a-camera active="false" position="0 0 0"></a-camera>
-<a-entity id="faceTarget" mindar-face-target="anchorIndex:1"></a-entity>
+<!-- สำคัญ: ให้ MindAR เป็นผู้เปิดและจัดการกล้องเอง -->
+<a-scene id="ar"
+  mindar-face="autoStart: false"
+  embedded
+  color-space="sRGB"
+  renderer="colorManagement: true, physicallyCorrectLights"
+  vr-mode-ui="enabled: false"
+  device-orientation-permission-ui="enabled: false">
+  <a-camera active="false" position="0 0 0"></a-camera>
+
+  <!-- anchor 1 = บริเวณปลายจมูก ตามตัวอย่างทางการของ MindAR -->
+  <a-entity id="faceTarget" mindar-face-target="anchorIndex: 1">
+    <a-sphere id="faceMarker" color="#00ff66" radius="0.06" visible="false"></a-sphere>
+  </a-entity>
 </a-scene>
 
 <script>
-const video=document.getElementById('cam');
-const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
-const ar=document.getElementById('ar'), target=document.getElementById('faceTarget');
-const start=document.getElementById('start'), btn=document.getElementById('startBtn');
-const status=document.getElementById('status'), tip=document.getElementById('tip');
-const scoreEl=document.getElementById('score'), livesEl=document.getElementById('lives');
-const marker=document.getElementById('faceMarker');
+const scene = document.querySelector('#ar');
+const target = document.querySelector('#faceTarget');
+const btn = document.querySelector('#startBtn');
+const start = document.querySelector('#start');
+const status = document.querySelector('#status');
+const tip = document.querySelector('#tip');
+const canvas = document.querySelector('#game');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.querySelector('#score');
+const livesEl = document.querySelector('#lives');
+const faceMarker = document.querySelector('#faceMarker');
 
-let score=0,lives=3,faceFound=false,gameOn=false,stream=null,arSystem=null,spawnAt=0;
-let shieldX=0,items=[],last=0;
+let score=0, lives=3, faceFound=false, gameOn=false;
+let items=[], spawnAt=0, last=0, shieldX=0, started=false;
 
-const good=[['milk.png','🥛'],['fruit.png','🍎'],['vegetable.png','🥦'],['water.png','💧']];
-const bad=[['cigarette.png','🚬'],['drugs.png','💊'],['alcohol.png','🍺']];
-
-function resize(){canvas.width=innerWidth*devicePixelRatio;canvas.height=innerHeight*devicePixelRatio;ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0)}
-addEventListener('resize',resize);resize();
+function resize(){
+  const dpr=Math.min(devicePixelRatio||1,2);
+  canvas.width=innerWidth*dpr; canvas.height=innerHeight*dpr;
+  canvas.style.width=innerWidth+'px'; canvas.style.height=innerHeight+'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+addEventListener('resize',resize); resize();
 
 function setStatus(text,ok){
- status.textContent=text; status.style.background=ok?'#18a94b':'#dc3545';
+  status.textContent=text;
+  status.style.background=ok?'#18a94b':'#dc3545';
 }
-function livesUI(){livesEl.textContent='❤️'.repeat(lives)||'💀'}
+function updateLives(){ livesEl.textContent='❤️'.repeat(lives)||'💀'; }
 
-async function openCamera(){
- try{
-   stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:false});
-   video.srcObject=stream;
-   await video.play();
-   tip.textContent='กล้องเปิดแล้ว — กำลังตรวจใบหน้า...';
-   startMindAR();
- }catch(e){
-   setStatus('❌ เปิดกล้องไม่ได้: '+(e.name||'ไม่ทราบสาเหตุ'),false);
-   tip.textContent='ตรวจสอบสิทธิ์กล้องของ Safari แล้วลองใหม่';
-   console.error(e);
- }
-}
+const good=[
+  ['milk.png','🥛'],
+  ['fruit.png','🍎'],
+  ['vegetable.png','🥦'],
+  ['water.png','💧']
+];
+const bad=[
+  ['cigarette.png','🚬'],
+  ['drugs.png','💊'],
+  ['alcohol.png','🍺']
+];
+const imgs={};
+[...good,...bad].forEach(x=>{
+  const im=new Image(); im.src=x[0]; imgs[x[0]]=im;
+});
+
 function startMindAR(){
- try{
-   arSystem=ar.systems['mindar-face-system'];
-   if(!arSystem) throw new Error('MindAR system not ready');
-   arSystem.start();
- }catch(e){console.error(e);setStatus('⚠️ กล้องเปิดแล้ว แต่ Face Tracking เริ่มไม่ได้',false)}
+  if(started) return;
+  const system=scene.systems['mindar-face-system'];
+  if(!system){
+    setStatus('⚠️ กำลังโหลดระบบตรวจใบหน้า...',false);
+    setTimeout(startMindAR,500);
+    return;
+  }
+  started=true;
+  try{
+    system.start();
+    tip.textContent='กล้องเปิดแล้ว — มองตรงเข้ากล้อง';
+  }catch(e){
+    console.error(e);
+    started=false;
+    setStatus('❌ เปิดระบบ AR ไม่สำเร็จ',false);
+  }
 }
+
+btn.addEventListener('click',()=>{
+  start.style.display='none';
+  // เรียก start() จากการแตะของผู้ใช้โดยตรง เพื่อให้ Safari อนุญาตกล้อง
+  startMindAR();
+});
 
 target.addEventListener('targetFound',()=>{
- faceFound=true; gameOn=true; marker.style.display='block';
- setStatus('🟢 พบใบหน้า! เริ่มเกมได้เลย',true);
- tip.textContent='👈 เอียงซ้าย–ขวาเพื่อรับของดี / หลบสิ่งเสพติด 👉';
-});
-target.addEventListener('targetLost',()=>{
- faceFound=false; gameOn=false; marker.style.display='none';
- setStatus('🔴 ยังไม่พบใบหน้า — หันหน้าเข้ากล้อง',false);
+  faceFound=true;
+  gameOn=true;
+  faceMarker.setAttribute('visible','true');
+  setStatus('🟢 พบใบหน้า! เริ่มเกมได้เลย',true);
+  tip.textContent='👈 เอียงซ้าย–ขวา รับของดี / หลบสิ่งเสพติด 👉';
 });
 
-btn.onclick=async()=>{
- start.style.display='none';
- gameOn=false; faceFound=false;
- await openCamera();
-};
+target.addEventListener('targetLost',()=>{
+  faceFound=false;
+  gameOn=false;
+  faceMarker.setAttribute('visible','false');
+  setStatus('🔴 ยังไม่พบใบหน้า — หันหน้าเข้ากล้อง',false);
+});
 
 function addItem(){
- const isGood=Math.random()<.58;
- const d=(isGood?good:bad)[Math.floor(Math.random()*(isGood?good.length:bad.length))];
- const x=[innerWidth*.25,innerWidth*.5,innerWidth*.75][Math.floor(Math.random()*3)];
- items.push({x,y:-70,good:isGood,file:d[0],emoji:d[1],speed:130+Math.random()*45,done:false});
+  const isGood=Math.random()<0.58;
+  const list=isGood?good:bad;
+  const d=list[Math.floor(Math.random()*list.length)];
+  const cols=[innerWidth*.25,innerWidth*.5,innerWidth*.75];
+  items.push({
+    x:cols[Math.floor(Math.random()*cols.length)],
+    y:-70,
+    good:isGood,
+    file:d[0],
+    emoji:d[1],
+    speed:150+Math.random()*55
+  });
 }
 
-function collide(it){
- const hitY=innerHeight-190;
- if(it.y>hitY-40 && it.y<hitY+70 && Math.abs(it.x-(innerWidth/2+shieldX))<115){
-   it.done=true;
-   if(it.good){score+=10; status.textContent=it.emoji+' ของมีประโยชน์ +10 คะแนน';status.style.background='#18a94b'}
-   else{score=Math.max(0,score-10);status.textContent=it.emoji+' สิ่งเสพติด -10 คะแนน';status.style.background='#dc3545'}
-   scoreEl.textContent=score;
- }
+function handleHit(it){
+  const sy=innerHeight-150;
+  if(it.y>sy-60 && it.y<sy+55 && Math.abs(it.x-(innerWidth/2+shieldX))<105){
+    it.hit=true;
+    if(it.good){
+      score+=10;
+      setStatus(it.emoji+' ของมีประโยชน์ +10 คะแนน',true);
+    }else{
+      score=Math.max(0,score-10);
+      setStatus(it.emoji+' สิ่งเสพติด -10 คะแนน',false);
+    }
+    scoreEl.textContent=score;
+  }
 }
-const imgs={}; [...good,...bad].forEach(d=>{imgs[d[0]]=new Image();imgs[d[0]].src=d[0]});
 
-function loop(t){
- const dt=Math.min(.035,(t-last)/1000||.016); last=t;
- ctx.clearRect(0,0,innerWidth,innerHeight);
- if(gameOn&&faceFound&&t>spawnAt){addItem();spawnAt=t+1250}
- if(faceFound){
-   // Approximate head tilt using face target rotation from MindAR
-   const z=target.object3D?.rotation?.z||0;
-   shieldX=z>.08?-140:z<-.08?140:0;
- }
- items.forEach(it=>{if(!it.done)it.y+=it.speed*dt});
- items=items.filter(it=>it.y<innerHeight+100&&!it.done);
- items.forEach(it=>{
-   const im=imgs[it.file];
-   if(im.complete)ctx.drawImage(im,it.x-42,it.y-42,84,84);
-   collide(it);
- });
- // shield
- const sx=innerWidth/2+shieldX, sy=innerHeight-150;
- ctx.beginPath();ctx.arc(sx,sy,43,0,Math.PI*2);ctx.lineWidth=9;ctx.strokeStyle='#00d9ff';ctx.stroke();
- ctx.beginPath();ctx.arc(sx,sy,26,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.75)';ctx.fill();
- requestAnimationFrame(loop);
+function draw(){
+  ctx.clearRect(0,0,innerWidth,innerHeight);
+
+  // ใช้การหมุนของ face target เพื่อควบคุมโล่
+  if(faceFound){
+    const z=target.object3D && target.object3D.rotation ? target.object3D.rotation.z : 0;
+    shieldX = z>0.08 ? -140 : z<-0.08 ? 140 : 0;
+  }
+
+  const now=performance.now();
+  if(gameOn && faceFound && now>=spawnAt){
+    addItem();
+    spawnAt=now+1250;
+  }
+
+  const dt=Math.min(.04,(now-last)/1000||.016);
+  last=now;
+
+  for(const it of items){
+    if(!it.hit) it.y+=it.speed*dt;
+  }
+  items=items.filter(it=>!it.hit && it.y<innerHeight+100);
+
+  for(const it of items){
+    const im=imgs[it.file];
+    if(im && im.complete) ctx.drawImage(im,it.x-42,it.y-42,84,84);
+    handleHit(it);
+  }
+
+  const sx=innerWidth/2+shieldX, sy=innerHeight-150;
+  ctx.beginPath();ctx.arc(sx,sy,44,0,Math.PI*2);
+  ctx.lineWidth=9;ctx.strokeStyle='#00d9ff';ctx.stroke();
+  ctx.beginPath();ctx.arc(sx,sy,26,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,.78)';ctx.fill();
+
+  requestAnimationFrame(draw);
 }
-requestAnimationFrame(loop);
+requestAnimationFrame(draw);
 </script>
 </body>
 </html>

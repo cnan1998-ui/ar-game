@@ -1,181 +1,282 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  >
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
 
   <title>ผู้พิทักษ์จิ๋ว - AR เกมป้องกันสิ่งเสพติด</title>
 
+  <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+
+  <!-- MindAR Face -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-aframe.prod.js"></script>
 
   <style>
+
     * {
       box-sizing: border-box;
       -webkit-tap-highlight-color: transparent;
     }
 
+    html,
     body {
       margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
       overflow: hidden;
-      font-family: Tahoma, sans-serif;
       background: #000;
+      font-family: Tahoma, Arial, sans-serif;
     }
+
+    /* =========================
+       คะแนน
+    ========================= */
 
     #ui-container {
+
       position: fixed;
+
       top: 15px;
       left: 50%;
+
       transform: translateX(-50%);
-      z-index: 9999;
 
-      background: rgba(0, 0, 0, 0.75);
-      color: #fff;
+      z-index: 99999;
 
-      padding: 10px 20px;
-      border-radius: 25px;
+      padding: 12px 22px;
 
-      font-size: 18px;
+      background: rgba(20,20,20,0.82);
+
+      color: white;
+
+      border-radius: 22px;
+
+      font-size: 19px;
+
       font-weight: bold;
 
       text-align: center;
+
       white-space: nowrap;
 
-      box-shadow: 0 3px 15px rgba(0,0,0,.4);
+      box-shadow:
+        0 5px 20px rgba(0,0,0,0.35);
+
     }
 
+    /* =========================
+       ข้อความด้านล่าง
+    ========================= */
+
     #instructions {
+
       position: fixed;
+
       bottom: 25px;
       left: 50%;
+
       transform: translateX(-50%);
 
-      z-index: 9999;
+      z-index: 99999;
 
-      color: #fff;
-      background: #dc3545;
+      width: calc(100% - 40px);
 
-      padding: 12px 20px;
-      border-radius: 30px;
+      max-width: 430px;
 
-      font-size: 16px;
+      padding: 13px 20px;
+
+      border-radius: 25px;
+
+      background: #28a745;
+
+      color: white;
+
+      font-size: 17px;
+
       font-weight: bold;
 
       text-align: center;
 
-      width: calc(100% - 40px);
-      max-width: 500px;
+      line-height: 1.4;
 
       pointer-events: none;
 
-      box-shadow: 0 3px 15px rgba(0,0,0,.3);
+      box-shadow:
+        0 5px 20px rgba(0,0,0,0.3);
+
     }
 
+    /* =========================
+       หน้าจอเริ่มเกม
+    ========================= */
+
     #start-screen {
+
       position: fixed;
+
       inset: 0;
 
-      z-index: 10000;
+      z-index: 100000;
 
       display: flex;
+
       align-items: center;
+
       justify-content: center;
+
+      padding: 20px;
 
       background:
         linear-gradient(
-          rgba(0,0,0,.65),
-          rgba(0,0,0,.75)
+          rgba(0,0,0,0.7),
+          rgba(0,0,0,0.82)
         );
 
-      color: #fff;
+      color: white;
 
       text-align: center;
+
     }
 
     #start-box {
-      width: calc(100% - 40px);
-      max-width: 400px;
 
-      padding: 30px 20px;
+      width: 100%;
 
-      background: rgba(20,20,20,.9);
+      max-width: 390px;
+
+      padding: 30px 22px;
+
       border-radius: 25px;
 
-      box-shadow: 0 10px 40px rgba(0,0,0,.5);
+      background: rgba(25,25,25,0.95);
+
+      box-shadow:
+        0 10px 40px rgba(0,0,0,0.6);
+
     }
 
     #start-box h1 {
-      margin: 0 0 10px;
+
+      margin: 0 0 15px;
+
       font-size: 28px;
+
     }
 
     #start-box p {
-      line-height: 1.6;
-      color: #ddd;
+
+      margin: 0 0 25px;
+
+      color: #eee;
+
+      line-height: 1.7;
+
+      font-size: 16px;
+
     }
 
     #start-button {
-      border: 0;
-      background: #28a745;
-      color: white;
 
-      padding: 15px 30px;
+      width: 100%;
+
+      border: 0;
 
       border-radius: 30px;
 
+      padding: 15px;
+
+      background: #28a745;
+
+      color: white;
+
       font-size: 20px;
+
       font-weight: bold;
 
-      cursor: pointer;
-
-      width: 100%;
     }
 
     #start-button:active {
-      transform: scale(.96);
+
+      transform: scale(0.96);
+
     }
 
+    /* =========================
+       Debug
+    ========================= */
+
     #debug {
+
       position: fixed;
+
+      top: 72px;
+
       left: 10px;
-      top: 70px;
-      z-index: 9999;
 
-      color: #fff;
-      font-size: 11px;
+      z-index: 99998;
 
-      background: rgba(0,0,0,.5);
       padding: 4px 8px;
 
       border-radius: 10px;
 
+      background: rgba(0,0,0,0.5);
+
+      color: white;
+
+      font-size: 11px;
+
       pointer-events: none;
+
     }
 
     .hidden {
       display: none !important;
     }
+
   </style>
 </head>
 
+
 <body>
 
-  <!-- หน้าเริ่มเกม -->
+
+  <!-- =========================
+       หน้าเริ่มเกม
+  ========================= -->
+
   <div id="start-screen">
 
     <div id="start-box">
 
-      <h1>🛡️ ผู้พิทักษ์จิ๋ว</h1>
+      <h1>
+        🛡️ ผู้พิทักษ์จิ๋ว
+      </h1>
 
       <p>
+
         เกม AR ป้องกันสิ่งเสพติด
+
         <br><br>
-        🥛🍏🥦 รับของดี
+
+        🟢 รับของดี
+
         <br>
-        🚬💊🍷 หลบของไม่ดี
+
+        🔴 หลบสิ่งไม่ดี
+
         <br><br>
-        เอียงศีรษะซ้าย-ขวาเพื่อบังคับโล่
+
+        เอียงศีรษะซ้าย-ขวา
+        เพื่อควบคุมโล่
+
       </p>
 
       <button id="start-button">
@@ -187,34 +288,53 @@
   </div>
 
 
-  <!-- คะแนน -->
+  <!-- =========================
+       คะแนน
+  ========================= -->
+
   <div id="ui-container">
 
     🏆 คะแนน:
-    <b id="score-text">0</b>
+    <span id="score-text">0</span>
 
     &nbsp; | &nbsp;
 
     พลัง:
-    <span id="lives-text">❤️❤️❤️</span>
+    <span id="lives-text">
+      ❤️❤️❤️
+    </span>
 
   </div>
 
 
-  <!-- คำแนะนำ -->
+  <!-- =========================
+       คำแนะนำ
+  ========================= -->
+
   <div id="instructions">
-    👆 กด "เริ่มเกม" เพื่อเปิดกล้อง
+
+    👆 กด "เริ่มเกม"
+
   </div>
 
 
-  <!-- Debug -->
+  <!-- =========================
+       Debug
+  ========================= -->
+
   <div id="debug">
+
     กำลังเตรียมเกม...
+
   </div>
 
 
-  <!-- AR -->
+  <!-- =========================
+       A-FRAME / MINDAR
+  ========================= -->
+
   <a-scene
+
     id="ar-scene"
 
     mindar-face
@@ -226,7 +346,7 @@
     renderer="
       colorManagement: true;
       physicallyCorrectLights: true;
-      antialias: true
+      antialias: true;
     "
 
     vr-mode-ui="enabled: false"
@@ -234,7 +354,11 @@
     device-orientation-permission-ui="enabled: false"
 
     loading-screen="enabled: false"
+
   >
+
+
+    <!-- กล้องของ MindAR -->
 
     <a-camera
       active="false"
@@ -242,79 +366,97 @@
     ></a-camera>
 
 
-    <!-- จุดจับใบหน้า -->
+    <!-- =========================
+         ใบหน้า
+    ========================= -->
+
     <a-entity
       id="face-target"
       mindar-face-target="anchorIndex: 1"
     >
 
-      <!-- โล่ของผู้เล่น -->
+      <!-- โล่ -->
       <a-ring
+
         id="player-shield"
-        position="0 -0.25 -0.1"
+
+        position="0 -0.25 0"
+
+        rotation="0 0 0"
 
         radius-inner="0.075"
+
         radius-outer="0.105"
 
-        color="#00d9ff"
-
         material="
+          color: #00d9ff;
           shader: flat;
-          opacity: 0.95;
-          transparent: true
+          opacity: 1;
+          transparent: false;
         "
+
       ></a-ring>
 
-      <a-sphere
-        position="0 -0.25 -0.1"
 
-        radius="0.06"
+      <!-- จุดกลางโล่ -->
 
-        color="#00d9ff"
+      <a-circle
+
+        position="0 -0.25 0"
+
+        radius="0.055"
 
         material="
+          color: #ffffff;
           shader: flat;
-          opacity: 0.75;
-          transparent: true
+          opacity: 0.9;
         "
-      ></a-sphere>
+
+      ></a-circle>
 
     </a-entity>
 
 
-    <!-- พื้นที่สำหรับไอเทม -->
+    <!-- =========================
+         กล่องไอเทม
+    ========================= -->
+
     <a-entity
       id="items-container"
-      position="0 0 -1"
+      position="0 0 -1.2"
     ></a-entity>
+
 
   </a-scene>
 
 
 <script>
 
-  /*********************************
-   * ตัวแปรเกม
-   *********************************/
+  /* =====================================================
+     ตัวแปรเกม
+  ===================================================== */
 
   let score = 0;
+
   let lives = 3;
 
   let gameActive = false;
+
   let faceDetected = false;
 
   let shieldPosX = 0;
 
   let spawnTimer = null;
 
-  let itemCount = 0;
+  let itemNumber = 0;
 
 
-  /*********************************
-   * DOM
-   *********************************/
+  /* =====================================================
+     DOM
+  ===================================================== */
 
-  const scene = document.getElementById("ar-scene");
+  const scene =
+    document.getElementById("ar-scene");
 
   const faceTarget =
     document.getElementById("face-target");
@@ -344,85 +486,25 @@
     document.getElementById("start-button");
 
 
-  /*********************************
-   * สร้าง Emoji เป็นรูปภาพ
-   *********************************/
+  /* =====================================================
+     Debug
+  ===================================================== */
 
-  function createEmojiTexture(emoji) {
+  function debugMessage(message) {
 
-    const canvas =
-      document.createElement("canvas");
-
-    canvas.width = 256;
-    canvas.height = 256;
-
-    const ctx =
-      canvas.getContext("2d");
-
-    ctx.clearRect(
-      0,
-      0,
-      256,
-      256
-    );
-
-    ctx.font =
-      "180px Arial, sans-serif";
-
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-
-    ctx.fillText(
-      emoji,
-      128,
-      135
-    );
-
-    return canvas.toDataURL(
-      "image/png"
-    );
-  }
-
-
-  /*********************************
-   * รูปไอเทม
-   *********************************/
-
-  const goodTextures = [
-
-    createEmojiTexture("🥛"),
-    createEmojiTexture("🍏"),
-    createEmojiTexture("🥦")
-
-  ];
-
-  const badTextures = [
-
-    createEmojiTexture("🚬"),
-    createEmojiTexture("💊"),
-    createEmojiTexture("🍷")
-
-  ];
-
-
-  /*********************************
-   * Debug
-   *********************************/
-
-  function setDebug(text) {
-
-    debug.innerText = text;
+    debug.innerText = message;
 
     console.log(
-      "[GAME]",
-      text
+      "[AR GAME]",
+      message
     );
+
   }
 
 
-  /*********************************
-   * เริ่มเกม
-   *********************************/
+  /* =====================================================
+     เริ่มเกม
+  ===================================================== */
 
   startButton.addEventListener(
     "click",
@@ -437,118 +519,125 @@
     startButton.innerText =
       "⏳ กำลังเปิดกล้อง...";
 
-    setDebug(
-      "กำลังเริ่ม AR..."
-    );
-
-    /*
-     * เริ่มระบบ MindAR
-     */
-
-    const mindarSystem =
-      scene.systems["mindar-face"];
-
-    if (mindarSystem) {
-
-      try {
-
-        mindarSystem.start();
-
-        setDebug(
-          "เปิดกล้องแล้ว กำลังหาใบหน้า..."
-        );
-
-      } catch (error) {
-
-        console.error(error);
-
-        setDebug(
-          "ไม่สามารถเปิด AR ได้"
-        );
-
-      }
-
-    } else {
-
-      setDebug(
-        "ไม่พบระบบ MindAR"
-      );
-
-    }
 
     startScreen.classList.add(
       "hidden"
     );
 
+
     instructions.innerText =
       "🔍 กำลังค้นหาใบหน้า...";
+
 
     instructions.style.background =
       "#dc3545";
 
-    /*
-     * สำคัญ:
-     * เริ่มเกมทันที ไม่รอ faceDetected
-     */
 
     gameActive = true;
 
-    startSpawning();
+
+    debugMessage(
+      "เริ่มเกมแล้ว"
+    );
+
+
+    /*
+     * เริ่ม MindAR
+     */
+
+    try {
+
+      const mindar =
+        scene.systems["mindar-face"];
+
+      if (mindar) {
+
+        mindar.start();
+
+        debugMessage(
+          "เปิดระบบ AR แล้ว"
+        );
+
+      }
+
+    }
+    catch(error) {
+
+      console.error(error);
+
+      debugMessage(
+        "AR start error"
+      );
+
+    }
+
+
+    /*
+     * เริ่มสร้างไอเทม
+     */
+
+    startItemSpawner();
 
   }
 
 
-  /*********************************
-   * ตรวจพบใบหน้า
-   *********************************/
+  /* =====================================================
+     ตรวจพบใบหน้า
+  ===================================================== */
 
   faceTarget.addEventListener(
     "targetFound",
-    () => {
+    function() {
 
       faceDetected = true;
 
-      setDebug(
-        "👤 พบใบหน้า | ไอเทมกำลังตก"
-      );
 
       instructions.innerText =
-        "👈 เอียงหน้า ซ้าย-ขวา เพื่อเก็บของดี";
+        "👈 เอียงคอ ซ้าย-ขวา เพื่อเก็บของดี / หลบสิ่งไม่ดี 👉";
+
 
       instructions.style.background =
         "#28a745";
 
+
+      debugMessage(
+        "👤 พบใบหน้า"
+      );
+
     }
   );
 
 
-  /*********************************
-   * ไม่พบใบหน้า
-   *********************************/
+  /* =====================================================
+     ไม่พบใบหน้า
+  ===================================================== */
 
   faceTarget.addEventListener(
     "targetLost",
-    () => {
+    function() {
 
       faceDetected = false;
 
-      setDebug(
-        "ไม่พบใบหน้า แต่เกมยังทำงาน"
-      );
 
       instructions.innerText =
         "🔍 กรุณาหันหน้าเข้ากล้อง";
 
+
       instructions.style.background =
         "#dc3545";
+
+
+      debugMessage(
+        "ไม่พบใบหน้า"
+      );
 
     }
   );
 
 
-  /*********************************
-   * บังคับโล่ด้วยการเอียงหัว
-   *********************************/
+  /* =====================================================
+     ควบคุมโล่ด้วยการเอียงศีรษะ
+  ===================================================== */
 
   function updateHeadTilt() {
 
@@ -558,16 +647,16 @@
       faceTarget.object3D
     ) {
 
-      const rotationZ =
+      const z =
         faceTarget.object3D.rotation.z;
 
 
-      if (rotationZ > 0.08) {
+      if (z > 0.08) {
 
         shieldPosX = -0.3;
 
       }
-      else if (rotationZ < -0.08) {
+      else if (z < -0.08) {
 
         shieldPosX = 0.3;
 
@@ -581,22 +670,24 @@
 
       shield.setAttribute(
         "position",
-        `${shieldPosX} -0.25 -0.1`
+        `${shieldPosX} -0.25 0`
       );
 
     }
 
+
     requestAnimationFrame(
       updateHeadTilt
     );
+
   }
 
 
-  /*********************************
-   * เริ่มสร้างไอเทม
-   *********************************/
+  /* =====================================================
+     เริ่มระบบไอเทม
+  ===================================================== */
 
-  function startSpawning() {
+  function startItemSpawner() {
 
     if (spawnTimer) {
 
@@ -608,26 +699,26 @@
 
 
     /*
-     * สร้างทันที 1 ชิ้น
+     * ไอเทมชิ้นแรก
      */
 
     setTimeout(
-      () => {
+      function() {
 
         spawnItem();
 
       },
-      500
+      700
     );
 
 
     /*
-     * จากนั้นสร้างทุก 1.2 วินาที
+     * ไอเทมทุก 1.3 วินาที
      */
 
     spawnTimer =
       setInterval(
-        () => {
+        function() {
 
           if (gameActive) {
 
@@ -636,15 +727,15 @@
           }
 
         },
-        1200
+        1300
       );
 
   }
 
 
-  /*********************************
-   * สร้างไอเทม
-   *********************************/
+  /* =====================================================
+     สร้างไอเทม
+  ===================================================== */
 
   function spawnItem() {
 
@@ -653,14 +744,11 @@
     }
 
 
-    itemCount++;
+    itemNumber++;
 
 
     /*
-     * สุ่มของดี/ของเสีย
-     *
      * ของดี 60%
-     * ของเสีย 40%
      */
 
     const isGood =
@@ -668,155 +756,195 @@
 
 
     /*
-     * ตำแหน่งซ้าย กลาง ขวา
+     * ตำแหน่ง
      */
 
-    const positionsX = [
-      -0.3,
+    const positions = [
+      -0.38,
       0,
-      0.3
+      0.38
     ];
 
 
-    const startX =
-      positionsX[
+    const x =
+      positions[
         Math.floor(
           Math.random() *
-          positionsX.length
+          positions.length
         )
       ];
 
 
     /*
-     * เริ่มจากด้านบน
+     * จุดเริ่มต้นด้านบน
      */
 
-    let currentY = 0.75;
+    let y = 0.75;
 
 
     /*
-     * สร้าง a-image โดยตรง
-     *
-     * จุดนี้แก้จากโค้ดเดิม
+     * สร้าง Entity หลัก
      */
 
     const item =
       document.createElement(
-        "a-image"
+        "a-entity"
       );
 
 
     item.setAttribute(
       "position",
-      `${startX} ${currentY} 0`
-    );
-
-
-    item.setAttribute(
-      "width",
-      "0.20"
-    );
-
-
-    item.setAttribute(
-      "height",
-      "0.20"
+      `${x} ${y} 0`
     );
 
 
     /*
-     * เลือกรูป
+     * ชนิด
      */
 
-    let texture;
+    item.dataset.type =
+      isGood
+        ? "good"
+        : "bad";
+
+
+    /* =================================================
+       วงกลมสี
+    ================================================= */
+
+    const circle =
+      document.createElement(
+        "a-circle"
+      );
+
+
+    circle.setAttribute(
+      "radius",
+      "0.105"
+    );
+
+
+    circle.setAttribute(
+      "material",
+      isGood
+        ? "color: #20c997; shader: flat;"
+        : "color: #ff3b30; shader: flat;"
+    );
+
+
+    circle.setAttribute(
+      "position",
+      "0 0 0"
+    );
+
+
+    item.appendChild(
+      circle
+    );
+
+
+    /* =================================================
+       วงแหวน
+    ================================================= */
+
+    const ring =
+      document.createElement(
+        "a-ring"
+      );
+
+
+    ring.setAttribute(
+      "radius-inner",
+      "0.105"
+    );
+
+
+    ring.setAttribute(
+      "radius-outer",
+      "0.125"
+    );
+
+
+    ring.setAttribute(
+      "material",
+      "color: #ffffff; shader: flat;"
+    );
+
+
+    ring.setAttribute(
+      "position",
+      "0 0 0.005"
+    );
+
+
+    item.appendChild(
+      ring
+    );
+
+
+    /* =================================================
+       สัญลักษณ์ตรงกลาง
+       
+       ใช้รูปทรงแทน Emoji
+       เพื่อให้ iPhone / Android เห็นเหมือนกัน
+    ================================================= */
 
     if (isGood) {
 
-      texture =
-        goodTextures[
-          Math.floor(
-            Math.random() *
-            goodTextures.length
-          )
-        ];
-
-      item.dataset.type =
-        "good";
+      createGoodIcon(
+        item
+      );
 
     }
     else {
 
-      texture =
-        badTextures[
-          Math.floor(
-            Math.random() *
-            badTextures.length
-          )
-        ];
-
-      item.dataset.type =
-        "bad";
+      createBadIcon(
+        item
+      );
 
     }
 
 
-    /*
-     * ใส่รูป
-     */
-
-    item.setAttribute(
-      "src",
-      texture
-    );
-
-
-    /*
-     * ทำให้รูปสว่างชัด
-     */
-
-    item.setAttribute(
-      "material",
-      `
-        shader: flat;
-        transparent: true;
-        opacity: 1
-      `
-    );
-
-
-    /*
-     * ใส่ไอเทมเข้า Scene
-     */
+    /* =================================================
+       เพิ่มเข้า Scene
+    ================================================= */
 
     itemsContainer.appendChild(
       item
     );
 
 
-    setDebug(
-      `🎁 ไอเทม #${itemCount} ตกลงมา`
+    debugMessage(
+      `🎁 ไอเทม ${itemNumber} กำลังตก`
     );
 
 
     /*
-     * ความเร็วตก
+     * ทำให้เด่นขึ้น
      */
 
-    const speed = 0.012;
+    item.setAttribute(
+      "scale",
+      "1.15 1.15 1.15"
+    );
 
 
-    /*
-     * animation loop
-     */
+    /* =================================================
+       Animation
+    ================================================= */
 
-    const dropInterval =
+    const speed =
+      0.013;
+
+
+    const timer =
       setInterval(
-        () => {
+        function() {
 
           if (!gameActive) {
 
             clearInterval(
-              dropInterval
+              timer
             );
 
             removeItem(
@@ -829,38 +957,36 @@
 
 
           /*
-           * เลื่อนลง
+           * ตกลง
            */
 
-          currentY -= speed;
+          y -= speed;
 
 
           item.setAttribute(
             "position",
-            `${startX} ${currentY} 0`
+            `${x} ${y} 0`
           );
 
 
           /*
-           * ตรวจชนกับโล่
-           *
-           * ช่วง Y ประมาณโล่
+           * ตรวจชน
            */
 
           if (
-            currentY <= -0.16 &&
-            currentY >= -0.38
+            y <= -0.14 &&
+            y >= -0.39
           ) {
 
-            const distanceX =
+            const distance =
               Math.abs(
-                startX -
+                x -
                 shieldPosX
               );
 
 
             if (
-              distanceX < 0.17
+              distance < 0.19
             ) {
 
               handleCollision(
@@ -869,7 +995,7 @@
 
 
               clearInterval(
-                dropInterval
+                timer
               );
 
 
@@ -886,16 +1012,17 @@
 
 
           /*
-           * ตกพ้นจอ
+           * ตกพ้นหน้าจอ
            */
 
           if (
-            currentY < -0.85
+            y < -0.85
           ) {
 
             clearInterval(
-              dropInterval
+              timer
             );
+
 
             removeItem(
               item
@@ -910,11 +1037,217 @@
   }
 
 
-  /*********************************
-   * ลบไอเทม
-   *********************************/
+  /* =====================================================
+     สร้างไอคอนของดี
+  ===================================================== */
 
-  function removeItem(item) {
+  function createGoodIcon(
+    parent
+  ) {
+
+    /*
+     * สร้างเครื่องหมาย +
+     */
+
+    const vertical =
+      document.createElement(
+        "a-box"
+      );
+
+
+    vertical.setAttribute(
+      "width",
+      "0.025"
+    );
+
+
+    vertical.setAttribute(
+      "height",
+      "0.09"
+    );
+
+
+    vertical.setAttribute(
+      "depth",
+      "0.015"
+    );
+
+
+    vertical.setAttribute(
+      "color",
+      "#ffffff"
+    );
+
+
+    vertical.setAttribute(
+      "position",
+      "0 0 0.02"
+    );
+
+
+    parent.appendChild(
+      vertical
+    );
+
+
+    const horizontal =
+      document.createElement(
+        "a-box"
+      );
+
+
+    horizontal.setAttribute(
+      "width",
+      "0.09"
+    );
+
+
+    horizontal.setAttribute(
+      "height",
+      "0.025"
+    );
+
+
+    horizontal.setAttribute(
+      "depth",
+      "0.015"
+    );
+
+
+    horizontal.setAttribute(
+      "color",
+      "#ffffff"
+    );
+
+
+    horizontal.setAttribute(
+      "position",
+      "0 0 0.02"
+    );
+
+
+    parent.appendChild(
+      horizontal
+    );
+
+  }
+
+
+  /* =====================================================
+     สร้างไอคอนสิ่งไม่ดี
+  ===================================================== */
+
+  function createBadIcon(
+    parent
+  ) {
+
+    /*
+     * กากบาท
+     */
+
+    const bar1 =
+      document.createElement(
+        "a-box"
+      );
+
+
+    bar1.setAttribute(
+      "width",
+      "0.025"
+    );
+
+
+    bar1.setAttribute(
+      "height",
+      "0.10"
+    );
+
+
+    bar1.setAttribute(
+      "depth",
+      "0.015"
+    );
+
+
+    bar1.setAttribute(
+      "color",
+      "#ffffff"
+    );
+
+
+    bar1.setAttribute(
+      "rotation",
+      "0 0 45"
+    );
+
+
+    bar1.setAttribute(
+      "position",
+      "0 0 0.02"
+    );
+
+
+    parent.appendChild(
+      bar1
+    );
+
+
+    const bar2 =
+      document.createElement(
+        "a-box"
+      );
+
+
+    bar2.setAttribute(
+      "width",
+      "0.025"
+    );
+
+
+    bar2.setAttribute(
+      "height",
+      "0.10"
+    );
+
+
+    bar2.setAttribute(
+      "depth",
+      "0.015"
+    );
+
+
+    bar2.setAttribute(
+      "color",
+      "#ffffff"
+    );
+
+
+    bar2.setAttribute(
+      "rotation",
+      "0 0 -45"
+    );
+
+
+    bar2.setAttribute(
+      "position",
+      "0 0 0.02"
+    );
+
+
+    parent.appendChild(
+      bar2
+    );
+
+  }
+
+
+  /* =====================================================
+     ลบไอเทม
+  ===================================================== */
+
+  function removeItem(
+    item
+  ) {
 
     if (
       item &&
@@ -930,40 +1263,52 @@
   }
 
 
-  /*********************************
-   * ตรวจชน
-   *********************************/
+  /* =====================================================
+     ตรวจชน
+  ===================================================== */
 
-  function handleCollision(type) {
+  function handleCollision(
+    type
+  ) {
 
-    if (type === "good") {
+    if (
+      type === "good"
+    ) {
 
       score += 10;
+
 
       scoreText.innerText =
         score;
 
 
-      /*
-       * เอฟเฟกต์
-       */
-
       instructions.innerText =
-        "🎉 เยี่ยมมาก! +10 คะแนน";
+        "🎉 เก่งมาก! +10 คะแนน";
+
+
+      instructions.style.background =
+        "#28a745";
 
     }
     else {
 
       lives--;
 
-      updateLivesUI();
+
+      updateLives();
 
 
       instructions.innerText =
-        "💥 ระวัง! เสียพลัง";
+        "💥 โดนสิ่งไม่ดี!";
 
 
-      if (lives <= 0) {
+      instructions.style.background =
+        "#dc3545";
+
+
+      if (
+        lives <= 0
+      ) {
 
         gameOver();
 
@@ -974,13 +1319,14 @@
   }
 
 
-  /*********************************
-   * อัปเดตหัวใจ
-   *********************************/
+  /* =====================================================
+     อัปเดตพลัง
+  ===================================================== */
 
-  function updateLivesUI() {
+  function updateLives() {
 
     let hearts = "";
+
 
     for (
       let i = 0;
@@ -999,9 +1345,9 @@
   }
 
 
-  /*********************************
-   * Game Over
-   *********************************/
+  /* =====================================================
+     Game Over
+  ===================================================== */
 
   function gameOver() {
 
@@ -1014,11 +1360,13 @@
         spawnTimer
       );
 
+      spawnTimer = null;
+
     }
 
 
     instructions.innerText =
-      `💀 GAME OVER — ${score} คะแนน`;
+      `💀 GAME OVER | คะแนน ${score}`;
 
 
     instructions.style.background =
@@ -1026,44 +1374,44 @@
 
 
     setTimeout(
-      () => {
+      function() {
 
-        const playAgain =
+        const again =
           confirm(
-            `จบเกม!\n\nคะแนนของคุณ: ${score} คะแนน\n\nเล่นอีกครั้งไหม?`
+            `จบเกม!\n\nคะแนน ${score} คะแนน\n\nเล่นอีกครั้งไหม?`
           );
 
 
-        if (playAgain) {
+        if (again) {
 
           location.reload();
 
         }
 
       },
-      500
+      300
     );
 
   }
 
 
-  /*********************************
-   * เริ่มตรวจการเอียงหัว
-   *********************************/
+  /* =====================================================
+     เริ่มตรวจหัว
+  ===================================================== */
 
   updateHeadTilt();
 
 
-  /*********************************
-   * เมื่อ Scene โหลดเสร็จ
-   *********************************/
+  /* =====================================================
+     Scene โหลดเสร็จ
+  ===================================================== */
 
   scene.addEventListener(
     "loaded",
-    () => {
+    function() {
 
-      setDebug(
-        "ระบบ AR พร้อมใช้งาน"
+      debugMessage(
+        "ระบบ AR พร้อม"
       );
 
     }

@@ -1,183 +1,147 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="th">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>ผู้พิทักษ์จิ๋ว - AR เกมป้องกันสิ่งเสพติด</title>
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-aframe.prod.js"></script>
 <style>
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;font-family:Tahoma,Arial,sans-serif}
-#ui{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,0,0,.78);color:#fff;padding:11px 20px;border-radius:24px;font-size:18px;font-weight:700;white-space:nowrap}
-#msg{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;width:calc(100% - 36px);max-width:480px;padding:13px 18px;border-radius:28px;background:#dc3545;color:#fff;text-align:center;font-size:16px;font-weight:700;pointer-events:none;box-shadow:0 4px 16px #0005}
-#debug{position:fixed;top:66px;left:8px;z-index:9998;background:#0008;color:#fff;padding:3px 7px;border-radius:8px;font-size:10px;pointer-events:none}
-#tap{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:#0009;color:#fff;text-align:center}
-#tapbox{max-width:360px;margin:20px;padding:26px;border-radius:24px;background:#202020}
-#tapbox h1{margin:0 0 10px;font-size:27px}
-#tapbox p{line-height:1.6}
-#tap button{width:100%;padding:15px;border:0;border-radius:28px;background:#28a745;color:#fff;font-size:20px;font-weight:bold}
-.hidden{display:none!important}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;font-family:Arial,Tahoma,sans-serif}
+#gameUI{position:fixed;top:max(14px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:20;color:#fff;background:rgba(0,0,0,.72);padding:10px 18px;border-radius:24px;font-size:18px;font-weight:700;white-space:nowrap}
+#status{position:fixed;bottom:max(24px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:20;width:calc(100% - 44px);max-width:520px;padding:13px 18px;border-radius:28px;text-align:center;background:#dc3545;color:#fff;font-weight:700;font-size:17px}
+#start{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:22px}
+#card{max-width:420px;width:100%;background:#202020;color:#fff;border-radius:26px;padding:28px;text-align:center}
+#card h1{margin:0 0 12px;font-size:28px}
+#card p{line-height:1.7}
+#startBtn{border:0;width:100%;padding:16px;border-radius:32px;background:#20b24b;color:#fff;font-size:20px;font-weight:700}
+#cam{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);z-index:0;background:#000}
+#game{position:fixed;inset:0;z-index:5;pointer-events:none}
+#faceMarker{position:absolute;left:50%;top:50%;width:150px;height:190px;transform:translate(-50%,-50%);border:3px solid rgba(0,255,120,.75);border-radius:48% 48% 45% 45%;display:none}
+#tip{position:fixed;top:75px;left:50%;transform:translateX(-50%);z-index:19;color:#fff;background:rgba(0,0,0,.55);padding:7px 13px;border-radius:18px;font-size:13px}
+a-scene{position:fixed!important;inset:0!important;z-index:1!important;pointer-events:none}
 </style>
 </head>
 <body>
-<div id="ui">🏆 คะแนน: <span id="score">0</span> &nbsp;|&nbsp; พลัง: <span id="lives">❤️❤️❤️</span></div>
-<div id="msg">📷 กดเริ่มเกมเพื่อเปิดกล้อง</div>
-<div id="debug">กำลังโหลด AR...</div>
+<video id="cam" autoplay playsinline muted></video>
+<canvas id="game"></canvas>
+<div id="gameUI">🏆 คะแนน: <span id="score">0</span> &nbsp;|&nbsp; พลัง: <span id="lives">❤️❤️❤️</span></div>
+<div id="tip">กำลังเตรียมกล้องและตรวจใบหน้า...</div>
+<div id="status">🔴 ยังไม่พบใบหน้า</div>
+<div id="faceMarker"></div>
 
-<div id="tap">
-  <div id="tapbox">
-    <h1>🛡️ ผู้พิทักษ์จิ๋ว</h1>
-    <p>🥛🍎🥦💧 ของมีประโยชน์ <b>+10</b><br>
-    🚬💊🍺 สิ่งเสพติด <b>-10</b><br><br>
-    เอียงศีรษะซ้าย-ขวาเพื่อควบคุมโล่</p>
-    <button id="start">🎮 เริ่มเกมและเปิดกล้อง</button>
-  </div>
-</div>
+<div id="start"><div id="card">
+<h1>🛡️ ผู้พิทักษ์จิ๋ว</h1>
+<p>🥛🍎🥦💧 ของมีประโยชน์ <b>+10</b><br>🚬💊🍺 สิ่งเสพติด <b>-10</b><br><br>เอียงศีรษะซ้าย–ขวาเพื่อควบคุมโล่</p>
+<button id="startBtn">🎮 เริ่มเกมและเปิดกล้อง</button>
+</div></div>
 
-<a-scene id="scene"
-  mindar-face
-  embedded
-  color-space="sRGB"
-  renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true"
-  vr-mode-ui="enabled: false"
-  device-orientation-permission-ui="enabled: false"
-  loading-screen="enabled: false">
-
-  <a-camera active="false" position="0 0 0"></a-camera>
-
-  <a-entity id="face-target" mindar-face-target="anchorIndex: 1">
-    <a-ring id="shield" position="0 -0.25 -0.10"
-      radius-inner="0.075" radius-outer="0.105"
-      material="color:#00d9ff;shader:flat;opacity:1"></a-ring>
-    <a-circle position="0 -0.25 -0.10" radius="0.055"
-      material="color:#ffffff;shader:flat;opacity:.9"></a-circle>
-  </a-entity>
-
-  <a-entity id="items-container" position="0 0 -0.8"></a-entity>
+<a-scene id="ar" mindar-face="autoStart: false" embedded vr-mode-ui="enabled:false" device-orientation-permission-ui="enabled:false" renderer="colorManagement:true">
+<a-camera active="false" position="0 0 0"></a-camera>
+<a-entity id="faceTarget" mindar-face-target="anchorIndex:1"></a-entity>
 </a-scene>
 
 <script>
-const scene=document.getElementById('scene');
-const faceTarget=document.getElementById('face-target');
-const shield=document.getElementById('shield');
-const items=document.getElementById('items-container');
-const scoreEl=document.getElementById('score');
-const livesEl=document.getElementById('lives');
-const msg=document.getElementById('msg');
-const debug=document.getElementById('debug');
-const tap=document.getElementById('tap');
-const startBtn=document.getElementById('start');
+const video=document.getElementById('cam');
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const ar=document.getElementById('ar'), target=document.getElementById('faceTarget');
+const start=document.getElementById('start'), btn=document.getElementById('startBtn');
+const status=document.getElementById('status'), tip=document.getElementById('tip');
+const scoreEl=document.getElementById('score'), livesEl=document.getElementById('lives');
+const marker=document.getElementById('faceMarker');
 
-let score=0, active=false, found=false, shieldX=0, spawnTimer=null;
+let score=0,lives=3,faceFound=false,gameOn=false,stream=null,arSystem=null,spawnAt=0;
+let shieldX=0,items=[],last=0;
 
-const good=[
-  ['milk.png','นม'],['fruit.png','ผลไม้'],['vegetable.png','ผัก'],['water.png','น้ำ']
-];
-const bad=[
-  ['cigarette.png','บุหรี่'],['drugs.png','ยาเสพติด'],['alcohol.png','แอลกอฮอล์']
-];
+const good=[['milk.png','🥛'],['fruit.png','🍎'],['vegetable.png','🥦'],['water.png','💧']];
+const bad=[['cigarette.png','🚬'],['drugs.png','💊'],['alcohol.png','🍺']];
 
-function say(t){debug.textContent=t;console.log('[AR]',t)}
+function resize(){canvas.width=innerWidth*devicePixelRatio;canvas.height=innerHeight*devicePixelRatio;ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0)}
+addEventListener('resize',resize);resize();
 
-function startCamera(){
-  // MindAR normally starts itself after the scene is ready. Calling start here
-  // after a user gesture makes iOS/Safari camera permission much more reliable.
-  try{
-    const system=scene.systems['mindar-face'];
-    if(system && typeof system.start==='function'){
-      const p=system.start();
-      if(p && p.catch)p.catch(e=>say('กล้อง: '+e.message));
-    } else {
-      say('รอระบบกล้อง...');
-    }
-  }catch(e){say('กล้องเริ่มไม่ได้: '+e.message)}
-  active=true;
-  tap.classList.add('hidden');
-  msg.textContent='📷 กำลังเปิดกล้องและค้นหาใบหน้า...';
-  msg.style.background='#28a745';
-  if(!spawnTimer){
-    spawn();
-    spawnTimer=setInterval(spawn,1300);
-  }
+function setStatus(text,ok){
+ status.textContent=text; status.style.background=ok?'#18a94b':'#dc3545';
+}
+function livesUI(){livesEl.textContent='❤️'.repeat(lives)||'💀'}
+
+async function openCamera(){
+ try{
+   stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:false});
+   video.srcObject=stream;
+   await video.play();
+   tip.textContent='กล้องเปิดแล้ว — กำลังตรวจใบหน้า...';
+   startMindAR();
+ }catch(e){
+   setStatus('❌ เปิดกล้องไม่ได้: '+(e.name||'ไม่ทราบสาเหตุ'),false);
+   tip.textContent='ตรวจสอบสิทธิ์กล้องของ Safari แล้วลองใหม่';
+   console.error(e);
+ }
+}
+function startMindAR(){
+ try{
+   arSystem=ar.systems['mindar-face-system'];
+   if(!arSystem) throw new Error('MindAR system not ready');
+   arSystem.start();
+ }catch(e){console.error(e);setStatus('⚠️ กล้องเปิดแล้ว แต่ Face Tracking เริ่มไม่ได้',false)}
 }
 
-startBtn.addEventListener('click',startCamera);
-
-scene.addEventListener('loaded',()=>{
-  say('AR พร้อม - กดเริ่มเพื่อเปิดกล้อง');
+target.addEventListener('targetFound',()=>{
+ faceFound=true; gameOn=true; marker.style.display='block';
+ setStatus('🟢 พบใบหน้า! เริ่มเกมได้เลย',true);
+ tip.textContent='👈 เอียงซ้าย–ขวาเพื่อรับของดี / หลบสิ่งเสพติด 👉';
+});
+target.addEventListener('targetLost',()=>{
+ faceFound=false; gameOn=false; marker.style.display='none';
+ setStatus('🔴 ยังไม่พบใบหน้า — หันหน้าเข้ากล้อง',false);
 });
 
-faceTarget.addEventListener('targetFound',()=>{
-  found=true;
-  msg.textContent='👈 เอียงคอซ้าย-ขวา เพื่อรับของดี / หลบสิ่งเสพติด 👉';
-  msg.style.background='#28a745';
-  say('พบใบหน้า');
-});
-faceTarget.addEventListener('targetLost',()=>{
-  found=false;
-  msg.textContent='🔍 ไม่พบใบหน้า กรุณาหันหน้าเข้ากล้อง';
-  msg.style.background='#dc3545';
-});
+btn.onclick=async()=>{
+ start.style.display='none';
+ gameOn=false; faceFound=false;
+ await openCamera();
+};
 
-function headLoop(){
-  if(active && found && faceTarget.object3D){
-    const z=faceTarget.object3D.rotation.z;
-    shieldX=z>0.08?-0.38:z<-0.08?0.38:0;
-    shield.setAttribute('position',`${shieldX} -0.25 -0.10`);
-  }
-  requestAnimationFrame(headLoop);
-}
-headLoop();
-
-function spawn(){
-  if(!active)return;
-  const isGood=Math.random()<0.60;
-  const list=isGood?good:bad;
-  const data=list[Math.floor(Math.random()*list.length)];
-  const xs=[-.38,0,.38];
-  const x=xs[Math.floor(Math.random()*xs.length)];
-  let y=.75;
-
-  const item=document.createElement('a-image');
-  item.dataset.type=isGood?'good':'bad';
-  item.dataset.name=data[1];
-  item.setAttribute('src','./'+data[0]);
-  item.setAttribute('width','.30');
-  item.setAttribute('height','.30');
-  item.setAttribute('position',`${x} ${y} 0`);
-  item.setAttribute('material','shader:flat;transparent:true;opacity:1;side:double');
-  items.appendChild(item);
-  say((isGood?'🟢 ':'🔴 ')+data[1]+' กำลังตก');
-
-  const timer=setInterval(()=>{
-    if(!active){clearInterval(timer);item.remove();return}
-    y-=.013;
-    item.setAttribute('position',`${x} ${y} 0`);
-    if(item.object3D)item.object3D.rotation.z+=.018;
-
-    if(y<=-.14 && y>=-.39 && Math.abs(x-shieldX)<.20){
-      collide(item.dataset.type,item.dataset.name);
-      clearInterval(timer);item.remove();return;
-    }
-    if(y<-.9){clearInterval(timer);item.remove();}
-  },30);
+function addItem(){
+ const isGood=Math.random()<.58;
+ const d=(isGood?good:bad)[Math.floor(Math.random()*(isGood?good.length:bad.length))];
+ const x=[innerWidth*.25,innerWidth*.5,innerWidth*.75][Math.floor(Math.random()*3)];
+ items.push({x,y:-70,good:isGood,file:d[0],emoji:d[1],speed:130+Math.random()*45,done:false});
 }
 
-function collide(type,name){
-  if(type==='good'){
-    score+=10;
-    scoreEl.textContent=score;
-    msg.textContent='🎉 '+name+' +10 คะแนน';
-    msg.style.background='#28a745';
-  }else{
-    score=Math.max(0,score-10);
-    scoreEl.textContent=score;
-    msg.textContent='🚫 '+name+' -10 คะแนน';
-    msg.style.background='#dc3545';
-  }
+function collide(it){
+ const hitY=innerHeight-190;
+ if(it.y>hitY-40 && it.y<hitY+70 && Math.abs(it.x-(innerWidth/2+shieldX))<115){
+   it.done=true;
+   if(it.good){score+=10; status.textContent=it.emoji+' ของมีประโยชน์ +10 คะแนน';status.style.background='#18a94b'}
+   else{score=Math.max(0,score-10);status.textContent=it.emoji+' สิ่งเสพติด -10 คะแนน';status.style.background='#dc3545'}
+   scoreEl.textContent=score;
+ }
 }
+const imgs={}; [...good,...bad].forEach(d=>{imgs[d[0]]=new Image();imgs[d[0]].src=d[0]});
+
+function loop(t){
+ const dt=Math.min(.035,(t-last)/1000||.016); last=t;
+ ctx.clearRect(0,0,innerWidth,innerHeight);
+ if(gameOn&&faceFound&&t>spawnAt){addItem();spawnAt=t+1250}
+ if(faceFound){
+   // Approximate head tilt using face target rotation from MindAR
+   const z=target.object3D?.rotation?.z||0;
+   shieldX=z>.08?-140:z<-.08?140:0;
+ }
+ items.forEach(it=>{if(!it.done)it.y+=it.speed*dt});
+ items=items.filter(it=>it.y<innerHeight+100&&!it.done);
+ items.forEach(it=>{
+   const im=imgs[it.file];
+   if(im.complete)ctx.drawImage(im,it.x-42,it.y-42,84,84);
+   collide(it);
+ });
+ // shield
+ const sx=innerWidth/2+shieldX, sy=innerHeight-150;
+ ctx.beginPath();ctx.arc(sx,sy,43,0,Math.PI*2);ctx.lineWidth=9;ctx.strokeStyle='#00d9ff';ctx.stroke();
+ ctx.beginPath();ctx.arc(sx,sy,26,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.75)';ctx.fill();
+ requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>

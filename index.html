@@ -51,6 +51,7 @@ const start=document.getElementById("start"),btn=document.getElementById("startB
 const scoreEl=document.getElementById("score"),livesEl=document.getElementById("lives"),timeEl=document.getElementById("time"),missionEl=document.getElementById("mission"),missionPanel=document.getElementById("missionPanel"),rankShort=document.getElementById("rankShort");
 const complete=document.getElementById("complete"),completeTitle=document.getElementById("completeTitle"),completeText=document.getElementById("completeText"),continueBtn=document.getElementById("continueBtn"),selectedMission=document.getElementById("selectedMission");
 let detector=null,faceFound=false,running=false,lastVideoTime=-1,shieldX=0,targetShieldX=0,score=0,lives=3,items=[];
+let audioCtx=null;
 let last=performance.now(),nextSpawn=0,lastDetect=0,starting=false,level=1,elapsed=0,milkCount=0,missionDone=false,missionFailed=false;
 const MISSION_SECONDS=30,DETECT_INTERVAL=70;
 const good=[["milk.png","🥛"],["fruit.png","🍎"],["vegetable.png","🥦"],["water.png","💧"]];
@@ -65,10 +66,36 @@ function updateMissionUI(){const m=levelInfo[level];rankShort.textContent=m.shor
 function resetGame(){score=0;lives=3;items=[];elapsed=0;milkCount=0;missionDone=false;missionFailed=false;faceFound=false;running=false;shieldX=0;targetShieldX=0;nextSpawn=performance.now()+500;scoreEl.textContent=0;updateLives();timeEl.textContent=30;updateMissionUI();complete.style.display="none"}
 function selectLevel(n){if(running)return;level=n;document.querySelectorAll(".level").forEach(x=>x.classList.toggle("active",+x.dataset.level===level));selectedMission.textContent=levelInfo[level].title+" — "+levelInfo[level].goal;updateMissionUI()}
 document.querySelectorAll(".level").forEach(x=>x.addEventListener("click",()=>selectLevel(+x.dataset.level)));
+function initAudio(){
+ try{
+  if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended') audioCtx.resume();
+ }catch(e){ console.warn('Audio unavailable',e); }
+}
+function playTone(freq,duration,type='sine',volume=.08,delay=0){
+ if(!audioCtx)return;
+ const t=audioCtx.currentTime+delay;
+ const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+ o.type=type; o.frequency.setValueAtTime(freq,t);
+ g.gain.setValueAtTime(.0001,t);
+ g.gain.exponentialRampToValueAtTime(volume,t+.015);
+ g.gain.exponentialRampToValueAtTime(.0001,t+duration);
+ o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+duration+.02);
+}
+function playGoodSound(){
+ initAudio();
+ playTone(660,.10,'sine',.09,0);
+ playTone(880,.14,'sine',.09,.10);
+}
+function playBadSound(){
+ initAudio();
+ playTone(180,.16,'sawtooth',.10,0);
+ playTone(120,.20,'square',.07,.12);
+}
 async function setupDetector(){try{tip.textContent="กำลังโหลดระบบตรวจใบหน้า...";const vision=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22-rc.20250304/wasm");detector=await FaceDetector.createFromOptions(vision,{baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite"},runningMode:"VIDEO",minDetectionConfidence:.28,minSuppressionThreshold:.25});tip.textContent="กล้องเปิดแล้ว — กำลังตรวจใบหน้า...";requestAnimationFrame(detectLoop)}catch(e){console.error(e);running=false;setStatus("❌ โหลดระบบตรวจใบหน้าไม่สำเร็จ",false);tip.textContent="ตรวจสอบอินเทอร์เน็ต แล้วกดเริ่มใหม่"}}
 async function detectLoop(){if(!detector||video.readyState<2){requestAnimationFrame(detectLoop);return}const now=performance.now();if(now-lastDetect>=DETECT_INTERVAL&&video.currentTime!==lastVideoTime){lastDetect=now;lastVideoTime=video.currentTime;try{const r=detector.detectForVideo(video,now),ds=r.detections||[];if(ds.length){faceFound=true;running=true;const b=ds[0].boundingBox;const cx=(b.originX+b.width/2)/video.videoWidth;targetShieldX=Math.max(-190,Math.min(190,(0.5-cx)*560));setStatus("🟢 พบใบหน้า! "+(level===3?"หาเฉพาะนม 🥛":"รับของดี / หลบสิ่งเสพติด"),true);tip.textContent="👈 เลื่อนหรือเอียงหน้า ซ้าย–ขวา เพื่อควบคุมโล่ 👉"}else{faceFound=false;running=false;targetShieldX=0;setStatus("🔴 ยังไม่พบใบหน้า — ขยับหน้าเข้ากลางภาพ",false);tip.textContent="ให้เห็นใบหน้าชัด มีแสงเพียงพอ และอยู่ใกล้กล้องพอสมควร"}}catch(e){console.warn(e)}}requestAnimationFrame(detectLoop)}
 async function getCameraStream(){if(!window.isSecureContext)throw new Error("SECURE_CONTEXT_REQUIRED");if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw new Error("GET_USER_MEDIA_UNAVAILABLE");try{return await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:"user"},width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30,max:30}}})}catch(e){return await navigator.mediaDevices.getUserMedia({audio:false,video:true})}}
-async function startCamera(){if(starting)return;starting=true;btn.disabled=true;resetGame();try{tip.textContent="กำลังขอสิทธิ์ใช้กล้อง...";setStatus("🟡 กรุณาอนุญาตให้เบราว์เซอร์ใช้กล้อง",false);const stream=await getCameraStream();video.srcObject=stream;await video.play();if(!video.videoWidth)await new Promise(resolve=>{const t=setTimeout(resolve,1500);video.addEventListener("loadedmetadata",()=>{clearTimeout(t);resolve()},{once:true})});tip.textContent="กล้องเปิดแล้ว — กำลังตรวจใบหน้า...";start.style.display="none";await setupDetector()}catch(e){console.error(e);let msg="❌ เปิดกล้องไม่ได้";if(e.message==="SECURE_CONTEXT_REQUIRED")msg="❌ ต้องเปิดเกมผ่าน HTTPS เท่านั้น";else if(e.name==="NotAllowedError"||e.name==="PermissionDeniedError")msg="❌ ไม่ได้รับอนุญาตกล้อง — เปิด Camera ให้เบราว์เซอร์แล้วลองใหม่";else if(e.name==="NotFoundError")msg="❌ ไม่พบกล้องบนอุปกรณ์นี้";else if(e.name==="NotReadableError")msg="❌ กล้องกำลังถูกใช้งานโดยแอปอื่น";else if(e.message==="GET_USER_MEDIA_UNAVAILABLE")msg="❌ เบราว์เซอร์นี้ไม่รองรับการเปิดกล้อง";setStatus(msg,false);tip.textContent="ตรวจสอบสิทธิ์กล้อง แล้วกดปุ่มเริ่มเกมอีกครั้ง";start.style.display="flex"}finally{starting=false;btn.disabled=false}}
+async function startCamera(){if(starting)return;starting=true;btn.disabled=true;initAudio();resetGame();try{tip.textContent="กำลังขอสิทธิ์ใช้กล้อง...";setStatus("🟡 กรุณาอนุญาตให้เบราว์เซอร์ใช้กล้อง",false);const stream=await getCameraStream();video.srcObject=stream;await video.play();if(!video.videoWidth)await new Promise(resolve=>{const t=setTimeout(resolve,1500);video.addEventListener("loadedmetadata",()=>{clearTimeout(t);resolve()},{once:true})});tip.textContent="กล้องเปิดแล้ว — กำลังตรวจใบหน้า...";start.style.display="none";await setupDetector()}catch(e){console.error(e);let msg="❌ เปิดกล้องไม่ได้";if(e.message==="SECURE_CONTEXT_REQUIRED")msg="❌ ต้องเปิดเกมผ่าน HTTPS เท่านั้น";else if(e.name==="NotAllowedError"||e.name==="PermissionDeniedError")msg="❌ ไม่ได้รับอนุญาตกล้อง — เปิด Camera ให้เบราว์เซอร์แล้วลองใหม่";else if(e.name==="NotFoundError")msg="❌ ไม่พบกล้องบนอุปกรณ์นี้";else if(e.name==="NotReadableError")msg="❌ กล้องกำลังถูกใช้งานโดยแอปอื่น";else if(e.message==="GET_USER_MEDIA_UNAVAILABLE")msg="❌ เบราว์เซอร์นี้ไม่รองรับการเปิดกล้อง";setStatus(msg,false);tip.textContent="ตรวจสอบสิทธิ์กล้อง แล้วกดปุ่มเริ่มเกมอีกครั้ง";start.style.display="flex"}finally{starting=false;btn.disabled=false}}
 btn.addEventListener("click",startCamera,{passive:true});
 function chooseItem(){
  if(level===3){
@@ -80,7 +107,7 @@ function chooseItem(){
  const ok=Math.random()<.58,list=ok?good:bad,d=list[Math.floor(Math.random()*list.length)];return [d[0],d[1],ok];
 }
 function spawn(){const d=chooseItem(),lane=[.18,.30,.42,.54,.66,.78,.88][Math.floor(Math.random()*7)];items.push({x:innerWidth*lane,y:-70,speed:185+Math.random()*85,good:d[2],file:d[0],emoji:d[1],hit:false})}
-function hit(it){const sy=innerHeight-155;if(it.hit)return;if(it.y>sy-78&&it.y<sy+78&&Math.abs(it.x-(innerWidth/2+shieldX))<125){it.hit=true;score+=it.good?10:-10;scoreEl.textContent=score;if(it.file==="milk.png")milkCount++;if(!it.good){lives--;updateLives();if(level===2)missionFailed=true;if(lives<=0)running=false}setStatus(it.emoji+(it.good?" ของมีประโยชน์ +10 คะแนน":" สิ่งเสพติด -10 คะแนน"),it.good);}}
+function hit(it){const sy=innerHeight-155;if(it.hit)return;if(it.y>sy-78&&it.y<sy+78&&Math.abs(it.x-(innerWidth/2+shieldX))<125){it.hit=true;score+=it.good?10:-10;scoreEl.textContent=score;if(it.good)playGoodSound();else playBadSound();if(it.file==="milk.png")milkCount++;if(!it.good){lives--;updateLives();if(level===2)missionFailed=true;if(lives<=0)running=false}setStatus(it.emoji+(it.good?" ของมีประโยชน์ +10 คะแนน":" สิ่งเสพติด -10 คะแนน"),it.good);}}
 function finish(success,reason){if(missionDone)return;missionDone=true;running=false;missionPanel.style.display="none";completeTitle.textContent=success?"🎉 ภารกิจสำเร็จ!":"💪 ลองใหม่อีกครั้ง";let extra=level===3?"🥛 เก็บนมได้ "+milkCount+" กล่อง จากเป้าหมาย 9 กล่อง":"⏱️ เล่นครบ 30 วินาที";completeText.innerHTML="<b>"+levelInfo[level].title+"</b><br>"+reason+"<br>"+extra+"<br>🏆 คะแนน: "+score;continueBtn.textContent=success?(level<3?"ปลดล็อกยศถัดไป →":"เล่นอีกครั้ง"):("ลองภารกิจนี้ใหม่");complete.style.display="flex"}
 continueBtn.addEventListener("click",()=>{complete.style.display="none";if(missionDone&&level<3){selectLevel(level+1)}resetGame();start.style.display="flex";tip.textContent="เลือกภารกิจแล้วกดเริ่มเกม";setStatus("🔴 ยังไม่พบใบหน้า",false)});
 function draw(){const now=performance.now(),dt=Math.min(.04,(now-last)/1000||.016);last=now;ctx.clearRect(0,0,innerWidth,innerHeight);const follow=1-Math.pow(.0005,dt);shieldX+=(targetShieldX-shieldX)*follow;if(running&&faceFound&&lives>0&&!missionDone){elapsed+=dt;const remaining=Math.max(0,MISSION_SECONDS-elapsed);timeEl.textContent=Math.ceil(remaining);if(now>=nextSpawn){spawn();nextSpawn=now+(level===3?820:1000)}if(elapsed>=MISSION_SECONDS){if(level===1)finish(true,"รักษาสมาธิและเล่นครบ 30 วินาทีได้สำเร็จ");else if(level===2)finish(!missionFailed&&lives===3,missionFailed||lives<3?"เสียหัวใจระหว่างภารกิจ":"ควบคุมตัวเองและไม่เสียหัวใจเลย");else finish(milkCount>=9,milkCount>=9?"มุ่งเป้าหมายได้ยอดเยี่ยม":"ยังเก็บนมไม่ถึง 9 กล่อง")}}for(const it of items)if(!it.hit)it.y+=it.speed*dt;for(const it of items)hit(it);items=items.filter(it=>!it.hit&&it.y<innerHeight+100);for(const it of items){const im=images[it.file];if(im&&im.complete&&im.naturalWidth)ctx.drawImage(im,it.x-44,it.y-44,88,88);else{ctx.font="58px sans-serif";ctx.textAlign="center";ctx.fillText(it.emoji,it.x,it.y)}}const sx=innerWidth/2+shieldX,sy=innerHeight-155;ctx.beginPath();ctx.arc(sx,sy,48,0,Math.PI*2);ctx.lineWidth=9;ctx.strokeStyle="#00d9ff";ctx.stroke();ctx.beginPath();ctx.arc(sx,sy,29,0,Math.PI*2);ctx.fillStyle="rgba(255,255,255,.82)";ctx.fill();updateMissionUI();requestAnimationFrame(draw)}

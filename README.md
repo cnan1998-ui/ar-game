@@ -23,12 +23,11 @@
     <a-camera active="false" position="0 0 0"></a-camera>
     
     <a-entity id="face-target" mindar-face-target="anchorIndex: 1">
-      <a-sphere id="player-shield" position="0 -0.25 -0.1" radius="0.06" color="#00d2ff" opacity="0.8">
-        <a-ring color="#ffffff" radius-inner="0.06" radius-outer="0.08"></a-ring>
+      <a-sphere id="player-shield" position="0 -0.25 -0.1" radius="0.07" color="#00d2ff" opacity="0.8">
+        <a-ring color="#ffffff" radius-inner="0.07" radius-outer="0.09"></a-ring>
       </a-sphere>
     </a-entity>
 
-    <!-- กลุ่มวัตถุตก ตั้งพิกัดให้อยู่ด้านหน้ากล้องพอดี -->
     <a-entity id="items-container" position="0 0 -1"></a-entity>
   </a-scene>
 
@@ -42,10 +41,25 @@
     const instructions = document.getElementById('instructions');
     let shieldPosX = 0;
 
-    // ตรวจจับเมื่อกล้องเจอใบหน้า
+    // สร้างภาพไอคอน 2D จาก Emoji อัตโนมัติ
+    function createEmojiTexture(emojiText) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128;
+      canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      ctx.font = '90px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(emojiText, 64, 64);
+      return canvas.toDataURL();
+    }
+
+    const goodTextures = [createEmojiTexture('🥛'), createEmojiTexture('🍏'), createEmojiTexture('🥦')];
+    const badTextures = [createEmojiTexture('🚬'), createEmojiTexture('💊'), createEmojiTexture('🍷')];
+
     faceTarget.addEventListener("targetFound", () => {
       faceDetected = true;
-      instructions.innerText = "👈 เอียงคอ ซ้าย-ขวา เพื่อรับนมสด / หลบควันบุหรี่ 👉";
+      instructions.innerText = "👈 เอียงคอ ซ้าย-ขวา เพื่อรับนม/ผลไม้ และหลบบุหรี่ 👉";
       instructions.style.background = "#28a745";
     });
 
@@ -58,8 +72,8 @@
     function updateHeadTilt() {
       if (gameActive && faceDetected && faceTarget.object3D) {
         const tiltZ = faceTarget.object3D.rotation.z;
-        if (tiltZ > 0.1) shieldPosX = -0.3;
-        else if (tiltZ < -0.1) shieldPosX = 0.3;
+        if (tiltZ > 0.08) shieldPosX = -0.3;
+        else if (tiltZ < -0.08) shieldPosX = 0.3;
         else shieldPosX = 0;
         playerShield.setAttribute('position', `${shieldPosX} -0.25 -0.1`);
       }
@@ -73,17 +87,18 @@
       const isGood = Math.random() > 0.4;
       const positionsX = [-0.3, 0, 0.3];
       const startX = positionsX[Math.floor(Math.random() * positionsX.length)];
-      let startY = 0.8;
+      let startY = 0.7;
 
       item.setAttribute('position', `${startX} ${startY} 0`);
+      item.setAttribute('geometry', 'primitive: plane; width: 0.18; height: 0.18');
 
       if (isGood) {
-        item.setAttribute('geometry', 'primitive: sphere; radius: 0.08');
-        item.setAttribute('material', 'color: #28a745; shader: flat');
+        const randomGood = goodTextures[Math.floor(Math.random() * goodTextures.length)];
+        item.setAttribute('material', `src: ${randomGood}; transparent: true; shader: flat`);
         item.dataset.type = 'good';
       } else {
-        item.setAttribute('geometry', 'primitive: box; width: 0.12; height: 0.12; depth: 0.12');
-        item.setAttribute('material', 'color: #e74c3c; shader: flat');
+        const randomBad = badTextures[Math.floor(Math.random() * badTextures.length)];
+        item.setAttribute('material', `src: ${randomBad}; transparent: true; shader: flat`);
         item.dataset.type = 'bad';
       }
 
@@ -96,17 +111,16 @@
           return;
         }
 
-        startY -= 0.02;
+        startY -= 0.018;
         item.setAttribute('position', `${startX} ${startY} 0`);
 
-        // ตรวจจับการชน
-        if (startY <= -0.2 && startY >= -0.4 && Math.abs(startX - shieldPosX) < 0.15) {
+        if (startY <= -0.2 && startY >= -0.38 && Math.abs(startX - shieldPosX) < 0.15) {
           handleCollision(item.dataset.type);
           clearInterval(dropInterval);
           if (item.parentNode) item.remove();
         }
 
-        if (startY < -0.8) {
+        if (startY < -0.7) {
           clearInterval(dropInterval);
           if (item.parentNode) item.remove();
         }
@@ -114,7 +128,7 @@
     }
 
     updateHeadTilt();
-    setInterval(spawnItem, 1800);
+    setInterval(spawnItem, 1600);
 
     function handleCollision(type) {
       if (type === 'good') {

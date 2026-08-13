@@ -107,11 +107,41 @@ function chooseItem(){
  const ok=Math.random()<.58,list=ok?good:bad,d=list[Math.floor(Math.random()*list.length)];return [d[0],d[1],ok];
 }
 function spawn(){const d=chooseItem(),lane=[.18,.30,.42,.54,.66,.78,.88][Math.floor(Math.random()*7)];items.push({x:innerWidth*lane,y:-70,speed:185+Math.random()*85,good:d[2],file:d[0],emoji:d[1],hit:false})}
-function hit(it){const sy=innerHeight-155;if(it.hit)return;if(it.y>sy-78&&it.y<sy+78&&Math.abs(it.x-(innerWidth/2+shieldX))<125){it.hit=true;score+=it.good?10:-10;scoreEl.textContent=score;if(it.good)playGoodSound();else playBadSound();if(it.file==="milk.png")milkCount++;if(!it.good){lives--;updateLives();if(level===2)missionFailed=true;if(lives<=0)running=false}setStatus(it.emoji+(it.good?" ของมีประโยชน์ +10 คะแนน":" สิ่งเสพติด -10 คะแนน"),it.good);}}
+function hit(it){const sy=innerHeight-155;if(it.hit)return;if(it.y>sy-78&&it.y<sy+78&&Math.abs(it.x-(innerWidth/2+shieldX))<125){it.hit=true;score+=it.good?10:-10;scoreEl.textContent=score;if(it.good)goodSound();else badSound();if(it.good)playGoodSound();else playBadSound();if(it.file==="milk.png")milkCount++;if(!it.good){lives--;updateLives();if(level===2)missionFailed=true;if(lives<=0)running=false}setStatus(it.emoji+(it.good?" ของมีประโยชน์ +10 คะแนน":" สิ่งเสพติด -10 คะแนน"),it.good);}}
 function finish(success,reason){if(missionDone)return;missionDone=true;running=false;missionPanel.style.display="none";completeTitle.textContent=success?"🎉 ภารกิจสำเร็จ!":"💪 ลองใหม่อีกครั้ง";let extra=level===3?"🥛 เก็บนมได้ "+milkCount+" กล่อง จากเป้าหมาย 9 กล่อง":"⏱️ เล่นครบ 30 วินาที";completeText.innerHTML="<b>"+levelInfo[level].title+"</b><br>"+reason+"<br>"+extra+"<br>🏆 คะแนน: "+score;continueBtn.textContent=success?(level<3?"ปลดล็อกยศถัดไป →":"เล่นอีกครั้ง"):("ลองภารกิจนี้ใหม่");complete.style.display="flex"}
 continueBtn.addEventListener("click",()=>{complete.style.display="none";if(missionDone&&level<3){selectLevel(level+1)}resetGame();start.style.display="flex";tip.textContent="เลือกภารกิจแล้วกดเริ่มเกม";setStatus("🔴 ยังไม่พบใบหน้า",false)});
 function draw(){const now=performance.now(),dt=Math.min(.04,(now-last)/1000||.016);last=now;ctx.clearRect(0,0,innerWidth,innerHeight);const follow=1-Math.pow(.0005,dt);shieldX+=(targetShieldX-shieldX)*follow;if(running&&faceFound&&lives>0&&!missionDone){elapsed+=dt;const remaining=Math.max(0,MISSION_SECONDS-elapsed);timeEl.textContent=Math.ceil(remaining);if(now>=nextSpawn){spawn();nextSpawn=now+(level===3?820:1000)}if(elapsed>=MISSION_SECONDS){if(level===1)finish(true,"รักษาสมาธิและเล่นครบ 30 วินาทีได้สำเร็จ");else if(level===2)finish(!missionFailed&&lives===3,missionFailed||lives<3?"เสียหัวใจระหว่างภารกิจ":"ควบคุมตัวเองและไม่เสียหัวใจเลย");else finish(milkCount>=9,milkCount>=9?"มุ่งเป้าหมายได้ยอดเยี่ยม":"ยังเก็บนมไม่ถึง 9 กล่อง")}}for(const it of items)if(!it.hit)it.y+=it.speed*dt;for(const it of items)hit(it);items=items.filter(it=>!it.hit&&it.y<innerHeight+100);for(const it of items){const im=images[it.file];if(im&&im.complete&&im.naturalWidth)ctx.drawImage(im,it.x-44,it.y-44,88,88);else{ctx.font="58px sans-serif";ctx.textAlign="center";ctx.fillText(it.emoji,it.x,it.y)}}const sx=innerWidth/2+shieldX,sy=innerHeight-155;ctx.beginPath();ctx.arc(sx,sy,48,0,Math.PI*2);ctx.lineWidth=9;ctx.strokeStyle="#00d9ff";ctx.stroke();ctx.beginPath();ctx.arc(sx,sy,29,0,Math.PI*2);ctx.fillStyle="rgba(255,255,255,.82)";ctx.fill();updateMissionUI();requestAnimationFrame(draw)}
 selectLevel(1);updateLives();requestAnimationFrame(draw);
+
+let audioCtx=null,masterGain=null;
+function initAudio(){
+ try{
+  if(!audioCtx){
+   audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+   masterGain=audioCtx.createGain();
+   masterGain.gain.value=1.0;
+   masterGain.connect(audioCtx.destination);
+  }
+  if(audioCtx.state==="suspended") audioCtx.resume();
+ }catch(e){console.warn(e)}
+}
+function tone(freq,duration,start,type="sine",volume=.9){
+ if(!audioCtx||!masterGain)return;
+ const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+ o.type=type;o.frequency.setValueAtTime(freq,start);
+ g.gain.setValueAtTime(.0001,start);
+ g.gain.exponentialRampToValueAtTime(volume,start+.015);
+ g.gain.exponentialRampToValueAtTime(.0001,start+duration);
+ o.connect(g);g.connect(masterGain);o.start(start);o.stop(start+duration+.03);
+}
+function goodSound(){
+ initAudio();if(!audioCtx)return;const t=audioCtx.currentTime+.01;
+ tone(784,.14,t,"sine",.95);tone(988,.16,t+.10,"sine",.95);tone(1319,.20,t+.22,"sine",.85);
+}
+function badSound(){
+ initAudio();if(!audioCtx)return;const t=audioCtx.currentTime+.01;
+ tone(160,.20,t,"square",.95);tone(110,.30,t+.14,"sawtooth",.95);
+}
 </script>
 </body>
 </html>

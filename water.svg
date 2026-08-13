@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<rect width="256" height="256" rx="45" fill="#eaf8ff"/>
+<path d="M103 35h50v24l13 17v139H90V76l13-17z" fill="#91dbff" stroke="#1787c9" stroke-width="8"/>
+<rect x="103" y="39" width="50" height="20" rx="5" fill="#1787c9"/>
+<path d="M100 113q28-20 56 0v61q-28 20-56 0z" fill="#fff" opacity=".88"/>
+<text x="128" y="153" text-anchor="middle" font-family="Arial,sans-serif" font-size="25" font-weight="700" fill="#1787c9">น้ำ</text>
+</svg>

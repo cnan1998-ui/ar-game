@@ -1,71 +1,158 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <meta charset="UTF-8">
-  <title>ผู้พิทักษ์จิ๋ว - AR เกมป้องกันสิ่งเสพติด</title>
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-aframe.prod.js"></script>
-  <style>
-    body { margin: 0; overflow: hidden; font-family: 'Tahoma', sans-serif; }
-    #ui-container { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); z-index: 999; background: rgba(0, 0, 0, 0.7); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 18px; text-align: center; min-width: 220px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-    #instructions { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 999; color: #fff; background: #28a745; padding: 10px 20px; border-radius: 25px; font-size: 16px; font-weight: bold; text-align: center; pointer-events: none; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>ผู้พิทักษ์จิ๋ว - AR เกมป้องกันสิ่งเสพติด</title>
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-aframe.prod.js"></script>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;font-family:Tahoma,Arial,sans-serif}
+#ui{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,0,0,.78);color:#fff;padding:11px 20px;border-radius:24px;font-size:18px;font-weight:bold;white-space:nowrap}
+#msg{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;width:calc(100% - 36px);max-width:480px;padding:12px 18px;border-radius:26px;background:#28a745;color:#fff;text-align:center;font-size:16px;font-weight:bold;pointer-events:none}
+#start{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.78);color:#fff;text-align:center}
+#box{width:100%;max-width:400px;padding:28px 22px;border-radius:24px;background:rgba(25,25,25,.96)}
+#box h1{margin:0 0 12px;font-size:28px}
+#box p{line-height:1.7;color:#eee}
+button{width:100%;padding:15px;border:0;border-radius:30px;background:#28a745;color:#fff;font-size:20px;font-weight:bold}
+#debug{position:fixed;top:68px;left:8px;z-index:9998;color:#fff;background:rgba(0,0,0,.45);padding:3px 7px;border-radius:8px;font-size:10px}
+.hidden{display:none!important}
+</style>
 </head>
 <body>
-  <div id="ui-container"><span>🏆 คะแนน: <b id="score-text">0</b></span> | <span>พลัง: <span id="lives-text">❤️❤️❤️</span></span></div>
-  <div id="instructions">👈 เอียงคอ ซ้าย-ขวา เพื่อรับนมสด / หลบควันบุหรี่ 👉</div>
-  <a-scene mindar-face embedded color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
-    <a-camera active="false" position="0 0 0"></a-camera>
-    <a-entity id="face-target" mindar-face-target="anchorIndex: 1">
-      <a-sphere id="player-shield" position="0 -0.25 -0.1" radius="0.06" color="#00d2ff" opacity="0.8">
-        <a-ring color="#ffffff" radius-inner="0.06" radius-outer="0.08"></a-ring>
-      </a-sphere>
-    </a-entity>
-    <a-entity id="items-container"></a-entity>
-  </a-scene>
-  <script>
-    let score = 0, lives = 3, gameActive = true;
-    const faceTarget = document.getElementById('face-target'), playerShield = document.getElementById('player-shield'), itemsContainer = document.getElementById('items-container'), scoreText = document.getElementById('score-text'), livesText = document.getElementById('lives-text');
-    let shieldPosX = 0;
-    function updateHeadTilt() {
-      if (!gameActive) return;
-      const tiltZ = faceTarget.object3D.rotation.z;
-      if (tiltZ > 0.12) shieldPosX = -0.3;
-      else if (tiltZ < -0.12) shieldPosX = 0.3;
-      else shieldPosX = 0;
-      playerShield.setAttribute('position', `${shieldPosX} -0.25 -0.1`);
-      requestAnimationFrame(updateHeadTilt);
+<div id="start"><div id="box">
+<h1>🛡️ ผู้พิทักษ์จิ๋ว</h1>
+<p>🥛🍎🥦💧 ของมีประโยชน์ <b>+10 คะแนน</b><br>
+🚬💊🍺 สิ่งเสพติด <b>-10 คะแนน</b><br><br>
+เอียงศีรษะซ้าย-ขวาเพื่อควบคุมโล่</p>
+<button id="startBtn">🎮 เริ่มเกม</button>
+</div></div>
+<div id="ui">🏆 คะแนน: <span id="score">0</span> &nbsp;|&nbsp; พลัง: <span id="lives">❤️❤️❤️</span></div>
+<div id="msg">👆 กด “เริ่มเกม”</div>
+<div id="debug">พร้อม</div>
+
+<a-scene id="scene" mindar-face embedded color-space="sRGB"
+ renderer="colorManagement:true;antialias:true"
+ vr-mode-ui="enabled:false" device-orientation-permission-ui="enabled:false"
+ loading-screen="enabled:false">
+<a-camera active="false" position="0 0 0"></a-camera>
+<a-entity id="face" mindar-face-target="anchorIndex:1">
+<a-ring id="shield" position="0 -0.25 -0.08" radius-inner=".075" radius-outer=".105"
+ material="color:#00d9ff;shader:flat;opacity:1"></a-ring>
+<a-circle position="0 -0.25 -0.08" radius=".055"
+ material="color:#fff;shader:flat;opacity:.9"></a-circle>
+</a-entity>
+<a-entity id="items" position="0 0 -0.9"></a-entity>
+</a-scene>
+
+<script>
+const scene=document.getElementById('scene');
+const face=document.getElementById('face');
+const shield=document.getElementById('shield');
+const items=document.getElementById('items');
+const scoreEl=document.getElementById('score');
+const livesEl=document.getElementById('lives');
+const msg=document.getElementById('msg');
+const debug=document.getElementById('debug');
+const start=document.getElementById('start');
+const startBtn=document.getElementById('startBtn');
+
+let score=0,lives=3,active=false,found=false,shieldX=0,spawnTimer=null;
+
+const good=[
+  ['milk.svg','นม'],['fruit.svg','ผลไม้'],['vegetable.svg','ผัก'],['water.svg','น้ำ']
+];
+const bad=[
+  ['cigarette.svg','บุหรี่'],['drugs.svg','ยาเสพติด'],['alcohol.svg','แอลกอฮอล์']
+];
+
+function say(t){debug.textContent=t;console.log(t)}
+function asset(file){return './'+file}
+
+startBtn.onclick=()=>{
+  start.classList.add('hidden');
+  active=true;
+  msg.textContent='🔍 กำลังค้นหาใบหน้า...';
+  say('เกมเริ่มแล้ว');
+  try{const s=scene.systems['mindar-face']; if(s)s.start()}catch(e){say('AR start error')}
+  spawn();
+  spawnTimer=setInterval(spawn,1300);
+};
+
+face.addEventListener('targetFound',()=>{
+  found=true;
+  msg.textContent='👈 เอียงคอซ้าย-ขวา เพื่อรับของดี / หลบสิ่งเสพติด 👉';
+  msg.style.background='#28a745';
+  say('พบใบหน้า');
+});
+face.addEventListener('targetLost',()=>{
+  found=false;
+  msg.textContent='🔍 กรุณาหันหน้าเข้ากล้อง';
+  msg.style.background='#dc3545';
+});
+
+function head(){
+  if(active&&found&&face.object3D){
+    const z=face.object3D.rotation.z;
+    shieldX=z>.08?-.38:z<-.08?.38:0;
+    shield.setAttribute('position',`${shieldX} -0.25 -0.08`);
+  }
+  requestAnimationFrame(head);
+}
+head();
+
+function spawn(){
+  if(!active)return;
+  const isGood=Math.random()<.6;
+  const list=isGood?good:bad;
+  const data=list[Math.floor(Math.random()*list.length)];
+  const xs=[-.38,0,.38];
+  const x=xs[Math.floor(Math.random()*xs.length)];
+  let y=.75;
+
+  const el=document.createElement('a-image');
+  el.dataset.type=isGood?'good':'bad';
+  el.dataset.name=data[1];
+  el.setAttribute('src',asset(data[0]));
+  el.setAttribute('width','.30');
+  el.setAttribute('height','.30');
+  el.setAttribute('position',`${x} ${y} 0`);
+  el.setAttribute('material','shader:flat;transparent:true;side:double;opacity:1');
+  items.appendChild(el);
+  say((isGood?'🟢 ':'🔴 ')+data[1]+' กำลังตก');
+
+  const timer=setInterval(()=>{
+    if(!active){clearInterval(timer);el.remove();return}
+    y-=.013;
+    el.setAttribute('position',`${x} ${y} 0`);
+    if(el.object3D)el.object3D.rotation.z+=.02;
+
+    if(y<=-.14&&y>=-.39&&Math.abs(x-shieldX)<.20){
+      collide(el.dataset.type,el.dataset.name);
+      clearInterval(timer);el.remove();return;
     }
-    document.querySelector('a-scene').addEventListener('renderstart', () => { updateHeadTilt(); setInterval(spawnItem, 2000); });
-    function spawnItem() {
-      if (!gameActive) return;
-      const item = document.createElement('a-entity');
-      const isGood = Math.random() > 0.4;
-      const positionsX = [-0.3, 0, 0.3];
-      const startX = positionsX[Math.floor(Math.random() * positionsX.length)];
-      let startY = 0.6, posZ = -0.6;
-      item.setAttribute('position', `${startX} ${startY} ${posZ}`);
-      if (isGood) { item.setAttribute('geometry', 'primitive: sphere; radius: 0.05'); item.setAttribute('material', 'color: #28a745'); item.dataset.type = 'good'; }
-      else { item.setAttribute('geometry', 'primitive: box; width: 0.08; height: 0.08; depth: 0.08'); item.setAttribute('material', 'color: #343a40'); item.dataset.type = 'bad'; }
-      itemsContainer.appendChild(item);
-      const dropInterval = setInterval(() => {
-        if (!gameActive) { clearInterval(dropInterval); item.remove(); return; }
-        startY -= 0.015;
-        item.setAttribute('position', `${startX} ${startY} ${posZ}`);
-        if (startY <= -0.2 && startY >= -0.3 && Math.abs(startX - shieldPosX) < 0.1) { handleCollision(item.dataset.type); clearInterval(dropInterval); item.remove(); }
-        if (startY < -0.5) { clearInterval(dropInterval); item.remove(); }
-      }, 30);
-    }
-    function handleCollision(type) {
-      if (type === 'good') { score += 10; scoreText.innerText = score; }
-      else { lives -= 1; updateLivesUI(); if (lives <= 0) gameOver(); }
-    }
-    function updateLivesUI() {
-      let hearts = ''; for (let i = 0; i < lives; i++) hearts += '❤️';
-      livesText.innerText = hearts || '💀';
-    }
-    function gameOver() { gameActive = false; alert(`จบเกม! คุณได้คะแนน: ${score} คะแนน\nคุณคือผู้พิทักษ์จิ๋วที่เก่งมาก!`); location.reload(); }
-  </script>
+    if(y<-.9){clearInterval(timer);el.remove()}
+  },30);
+}
+
+function collide(type,name){
+  if(type==='good'){
+    score+=10;
+    scoreEl.textContent=score;
+    msg.textContent='🎉 '+name+' +10 คะแนน';
+    msg.style.background='#28a745';
+  }else{
+    score=Math.max(0,score-10);
+    scoreEl.textContent=score;
+    msg.textContent='🚫 '+name+' -10 คะแนน';
+    msg.style.background='#dc3545';
+  }
+}
+function updateLives(){
+  livesEl.textContent='❤️'.repeat(Math.max(0,lives))||'💀';
+}
+scene.addEventListener('loaded',()=>say('ระบบ AR พร้อมใช้งาน'));
+</script>
 </body>
 </html>
